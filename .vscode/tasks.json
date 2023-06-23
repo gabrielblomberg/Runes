@@ -1,0 +1,54 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile Debug",
+			"type": "shell",
+			"problemMatcher":"$gcc",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": true
+			},
+            "args": ["debug"],
+			"options": { "cwd": "${workspaceFolder}/scripts" },
+			"windows": { "command": ".\\compile.bat", },
+			"linux"  : { "command": "./compile.bash" }
+        },
+        {
+            "label": "Compile Release",
+			"type": "shell",
+			"problemMatcher":"$gcc",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": true
+			},
+            "args": ["release"],
+			"options": { "cwd": "${workspaceFolder}/scripts" },
+			"windows": { "command": ".\\compile.bat", },
+			"linux"  : { "command": "./compile.bash" }
+        },
+        {
+			"label": "Configure",
+			"type": "shell",
+			"problemMatcher": [],
+			"options": { "cwd": "${workspaceFolder}/scripts" },
+			"windows": { "command": ".\\configure.bat" },
+			"linux"  : { "command": "./configure.bash"}
+		},
+        {
+            "label": "Execute",
+            "type": "shell",
+            "problemMatcher": [],
+            "windows": { "command": ".\\bin\\runes.exe" },
+			"linux"  : { "command": "./bin/configure.bash"}
+        }
+    ]
+}
