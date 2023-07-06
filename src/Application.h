@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "Message.h"
+#include "util/Messenger.h"
 #include "interface/Window.h"
 #include "util/StopCondition.h"
 

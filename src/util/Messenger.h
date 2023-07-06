@@ -1,9 +1,9 @@
 #pragma once
 
-#include <array>
-#include <memory>
-#include <string>
-#include <unordered_map>
+#include <mutex>
+#include <tuple>
+#include <deque>
+#include <functional>
 
 #include "util/TypeList.h"
 
@@ -24,8 +24,10 @@ public:
 
     /**
      * @brief Construct a new Messenger object
+     * 
+     * @param threads The number of threads to handle messages with.
      */
-    Messenger();
+    Messenger(std::size_t threads = 4);
 
     /**
      * @brief Subscribe to a topic.
@@ -67,31 +69,70 @@ public:
 private:
 
     /**
+     * @brief Class responsible for owning a working thread.
+     */
+    class Worker
+    {
+    public:
+
+        Worker();
+
+        /**
+         * @brief Checks if the worker is ready to receive another task.
+         */
+        bool Ready();
+
+    private:
+
+        /// Thread executing subscription functions.
+        std::jthread m_thread;
+    };
+
+    /**
+     * @brief Meta function that transform a message type to a channel of those
+     * messages.
+     */
+    template<typename T>
+    struct MakeChannel {
+        using type = std::pair<std::mutex, std::deque<T>>;
+    };
+
+    /**
      * @brief Type denoting the queues of topic messages.
      */
-    using Streams = TypeList::Tuple<TypeList::List<Topics>>;
+    using Channels = TypeList::TupleOf<TypeList::Transform<Topics, MakeChannel>>;
+
+    /**
+     * @brief Meta function that transform a message type to a collection of
+     * callbacks on that message.
+     */
+    template<typename T>
+    struct MakeSubscription {
+        using type = std::vector<std::function<void(const T&)>>;
+    };
 
     /**
      * @brief Type denoting the subscriptions to each topic.
      */
-    using Subscriptions = TypeList::Tuple<
-        TypeList::Vector<TypeList::Function<Topics, void>>
-    >;
+    using Subscriptions = TypeList::TupleOf<TypeList::Transform<Topics, MakeSubscription>>;
+
+    /// Queues of messages to be processed.
+    Channels m_channels;
+
+    /// Threads handling messages.
+    std::vector<Worker> m_workers;
 
     /// The number of topics created by the messenger.
     std::array<unsigned, TypeList::Size<Topics>> m_counters;
-
-    /// The queues of messages on each topic.
-    Streams m_topics;
 
     /// The subscriptions to each topic.
     Subscriptions m_subscriptions;
 };
 
 template<typename Topics>
-Messenger<Topics>::Messenger()
-    : m_counters()
-    , m_topics()
+Messenger<Topics>::Messenger(std::size_t threads)
+    : m_workers()
+    , m_counters()
     , m_subscriptions()
 {}
 
@@ -100,6 +141,9 @@ template<std::size_t Topic>
 int Messenger<Topics>::subscribe(
     std::function<void(const TypeList::Get<Topics, Topic> &)> function
 ) {
+    // Lock the vector of callbacks for updating.
+    std::scoped_lock<std::mutex> lock(std::get<Topic>(m_channels).first);
+
     std::get<Topic>(m_subscriptions).push_back(function);
     m_counters[Topic]++;
     return m_counters[Topic];

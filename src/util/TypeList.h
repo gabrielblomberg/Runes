@@ -1,8 +1,6 @@
 #pragma once
 
-#include <vector>
-#include <list>
-#include <functional>
+#include <tuple>
 
 namespace TypeList {
 
@@ -11,6 +9,18 @@ namespace TypeList {
  */
 template<typename... Types>
 struct TypeList;
+
+// Empty
+
+template<typename List>
+struct IsEmpty {
+    static const constexpr bool value = false;
+};
+
+template<>
+struct IsEmpty<TypeList<>> {
+    static const constexpr bool value = true;
+};
 
 // Size
 
@@ -44,6 +54,8 @@ struct _Front<TypeList<Head, Tail...>> {
 template <typename List>
 using Front = typename _Front<List>::type;
 
+// Push front.
+
 template <typename Type, typename List>
 struct _PushFront;
 
@@ -58,6 +70,8 @@ struct _PushFront<Type, TypeList<Head, Tail...>> {
 template <typename Type, typename Head, typename... Tail>
 using PushFront = typename _PushFront<Type, TypeList<Head, Tail...>>::type;
 
+// Pop front.
+
 template <typename List>
 struct _PopFront;
 
@@ -69,36 +83,36 @@ struct _PopFront<TypeList<Head, Tail...>> {
 /**
  * @brief Remove a type to the front of a type list.
  */
-template <typename Head, typename... Tail>
-using PopFront = typename _PopFront<TypeList<Head, Tail...>>::type;
+template <typename List>
+using PopFront = typename _PopFront<List>::type;
 
-template <unsigned Index, typename List>
+// Get a type using an index on a type list.
+
+template <typename List, unsigned I>
 struct _Get;
 
-template <unsigned Index, typename Head, typename... Tail>
-struct _Get<Index, TypeList<Head, Tail...>> {
-    using type = typename _Get<Index - 1, TypeList<Tail...>>::type;
-};
+template <typename List, unsigned I>
+struct _Get : public _Get<PopFront<List>, I - 1> {};
 
-template <typename Head, typename... Tail>
-struct _Get<0, TypeList<Head, Tail...>> {
-    using type = Head;
-};
+template <typename List>
+struct _Get<List, 0> : public _Front<List> {};
 
 /**
- * @brief Get a type at an index to a type list.
+ * @brief Get a type from a type list from an index.
  */
-template<typename List, unsigned Index>
-using Get = typename _Get<Index, List>::type;
+template<typename List, unsigned I>
+using Get = _Get<List, I>::type;
+
+// Concatenate two type lists together.
 
 template<typename Left, typename Right>
-struct _Join;
+struct _Concatenate;
 
 template<
     typename LeftHead, typename RightHead,
     typename... LeftTail, typename... RightTail
 >
-struct _Join<
+struct _Concatenate<
     TypeList<LeftHead, LeftTail...>,
     TypeList<RightHead, RightTail...>
 > {
@@ -109,7 +123,32 @@ struct _Join<
  * @brief Concatenate two type lists together.
  */
 template<typename Left, typename Right>
-using Join = _Join<Left, Right>::type;
+using Concatenate = _Concatenate<Left, Right>::type;
+
+// Transform the types in a typelist with a meta function.
+
+template<template<typename T> class MetaFunction, typename Head, typename... Tail>
+struct _Transform
+{
+    using type = Concatenate<
+        TypeList<typename MetaFunction<Head>::type>,
+        typename _Transform<MetaFunction, Tail...>::type
+    >;
+};
+
+template<template<typename T> class MetaFunction, typename Head>
+struct _Transform<MetaFunction, TypeList<Head>>
+{
+    using type = TypeList<typename MetaFunction<Head>::type>;
+};
+
+/**
+ * @brief Transform types in a type list with a meta function.
+ */
+template<typename List, template<typename T> class MetaFunction>
+using Transform = _Transform<MetaFunction, List>::type;
+
+// Tuple.
 
 template<typename Head, typename... Tail>
 struct _Tuple;
@@ -123,75 +162,6 @@ struct _Tuple<TypeList<Head, Tail...>> {
  * @brief Convert a type list to a tuple of those types.
  */
 template<typename List>
-using Tuple = _Tuple<List>::type;
-
-template<typename List>
-struct _Vector;
-
-template<typename Head, typename... Tail>
-struct _Vector<TypeList<Head, Tail...>> {
-    using type = Join<
-        TypeList<std::vector<Head>>,
-        typename _Vector<TypeList<Tail...>>::type
-    >;
-};
-
-template<typename Head>
-struct _Vector<TypeList<Head>> {
-    using type = TypeList<std::vector<Head>>;
-};
-
-/**
- * @brief Create a type list with std::vector<T> applied around each type T in
- * the list.
- */
-template<typename List>
-using Vector = _Vector<List>::type;
-
-template<typename List>
-struct _List;
-
-template<typename Head, typename... Tail>
-struct _List<TypeList<Head, Tail...>> {
-    using type = Join<
-        TypeList<std::list<Head>>,
-        typename _List<TypeList<Tail...>>::type
-    >;
-};
-
-template<typename Head>
-struct _List<TypeList<Head>> {
-    using type = TypeList<std::list<Head>>;
-};
-
-/**
- * @brief Create a type list with std::queue<T> applied around each type T in
- * the list.
- */
-template<typename TList>
-using List = _List<TList>::type;
-
-template<typename List, typename Return = void, typename... Args>
-struct _Function;
-
-template<typename Return, typename Head, typename... Tail, typename... Args>
-struct _Function<TypeList<Head, Tail...>, Return, Args...> {
-    using type = Join<
-        TypeList<std::function<Return(const Head&, Args...)>>,
-        typename _Function<TypeList<Tail...>, Return, Args...>::type
-    >;
-};
-
-template<typename Return, typename Head, typename... Args>
-struct _Function<TypeList<Head>, Return, Args...> {
-    using type = TypeList<std::function<Return(const Head&, Args...)>>;
-};
-
-/**
- * @brief Create a type list with std::function<Return(const T&, Args...)>
- * applied around each type T in the list.
- */
-template<typename List, typename Return = void, typename... Args>
-using Function = _Function<List, Return, Args...>::type;
+using TupleOf = _Tuple<List>::type;
 
 } // namespace TypeList
