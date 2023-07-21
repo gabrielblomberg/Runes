@@ -78,6 +78,9 @@ public:
 
 private:
 
+    /// Stop source for stopping the application.
+    std::stop_source m_stop;
+
     /// The window that states can draw to.
     Window m_window;
 
@@ -89,7 +92,4 @@ private:
 
     /// Thread running the application.
     std::jthread m_state_thread;
-
-    /// Stop source for stopping the application.
-    std::stop_source m_stop;
 };

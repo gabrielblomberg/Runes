@@ -3,7 +3,9 @@
 #include "states/GameState.h"
 
 Application::Application()
-    : m_window("Runes")
+    : m_stop()
+    , m_window("Runes")
+    , m_messenger(m_stop)
 {
     m_state = std::make_unique<GameState>(this, m_stop.get_token());
 

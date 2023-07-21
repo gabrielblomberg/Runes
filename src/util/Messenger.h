@@ -4,6 +4,9 @@
 #include <tuple>
 #include <deque>
 #include <functional>
+#include <optional>
+#include <condition_variable>
+#include <chrono>
 
 #include "util/TypeList.h"
 
@@ -25,9 +28,18 @@ public:
     /**
      * @brief Construct a new Messenger object
      * 
+     * @param stop A stop source to use if provided.
      * @param threads The number of threads to handle messages with.
      */
-    Messenger(std::size_t threads = 4);
+    Messenger(
+        std::optional<std::stop_source> stop = std::nullopt,
+        std::size_t threads = 4
+    );
+
+    /**
+     * @brief Stops the threads.
+     */
+    ~Messenger();
 
     /**
      * @brief Subscribe to a topic.
@@ -38,8 +50,8 @@ public:
      * @returns An integer identifier of the subscription.
      */
     template<std::size_t Topic>
-    int subscribe(
-        std::function<void(const TypeList::Get<Topics, Topic> &)> function
+    void subscribe(
+        std::function<void(const TypeList::Get<Topics, Topic> &)> &&function
     );
 
     /**
@@ -69,90 +81,163 @@ public:
 private:
 
     /**
-     * @brief Class responsible for owning a working thread.
+     * @brief Channel type.
      */
-    class Worker
+    struct Channel
     {
-    public:
+        // Mutex protecting concurrent calling back of call backs.
+        std::mutex mutex;
 
-        Worker();
-
-        /**
-         * @brief Checks if the worker is ready to receive another task.
-         */
-        bool Ready();
-
-    private:
-
-        /// Thread executing subscription functions.
-        std::jthread m_thread;
+        // Callbacks on each message.
+        std::vector<std::function<void(void*)>> callbacks;
     };
 
     /**
-     * @brief Meta function that transform a message type to a channel of those
-     * messages.
+     * @brief Thread of each worker processing messages.
+     * 
+     * @param stop A stop token to stop the worker thread.
      */
-    template<typename T>
-    struct MakeChannel {
-        using type = std::pair<std::mutex, std::deque<T>>;
-    };
+    void worker(std::stop_token stop);
 
-    /**
-     * @brief Type denoting the queues of topic messages.
-     */
-    using Channels = TypeList::TupleOf<TypeList::Transform<Topics, MakeChannel>>;
-
-    /**
-     * @brief Meta function that transform a message type to a collection of
-     * callbacks on that message.
-     */
-    template<typename T>
-    struct MakeSubscription {
-        using type = std::vector<std::function<void(const T&)>>;
-    };
-
-    /**
-     * @brief Type denoting the subscriptions to each topic.
-     */
-    using Subscriptions = TypeList::TupleOf<TypeList::Transform<Topics, MakeSubscription>>;
+    /// Channels for each topic.
+    std::array<Channel, TypeList::Size<Topics>> m_channels;
 
     /// Queues of messages to be processed.
-    Channels m_channels;
+    std::deque<std::pair<std::size_t, std::shared_ptr<void>>> m_queue;
+
+    /// Mutex protecting concurrent access to m_queue and condition variable.
+    std::mutex m_mutex;
+
+    /// Condition workers wait on.
+    std::condition_variable_any m_condition;
 
     /// Threads handling messages.
-    std::vector<Worker> m_workers;
+    std::vector<std::jthread> m_workers;
 
-    /// The number of topics created by the messenger.
-    std::array<unsigned, TypeList::Size<Topics>> m_counters;
-
-    /// The subscriptions to each topic.
-    Subscriptions m_subscriptions;
+    /// Source for stopping the messaging.
+    std::stop_source m_stop_source;
 };
 
 template<typename Topics>
-Messenger<Topics>::Messenger(std::size_t threads)
-    : m_workers()
-    , m_counters()
-    , m_subscriptions()
-{}
+Messenger<Topics>::Messenger(
+    std::optional<std::stop_source> stop,
+    std::size_t threads
+) {
+    if (stop) {
+        m_stop_source = stop.value();
+    }
+
+    for (std::size_t i = 0; i < threads; i++) {
+        m_workers.push_back(
+            std::jthread(&Messenger::worker, this, m_stop_source.get_token())
+        );
+    }
+}
 
 template<typename Topics>
-template<std::size_t Topic>
-int Messenger<Topics>::subscribe(
-    std::function<void(const TypeList::Get<Topics, Topic> &)> function
-) {
-    // Lock the vector of callbacks for updating.
-    std::scoped_lock<std::mutex> lock(std::get<Topic>(m_channels).first);
-
-    std::get<Topic>(m_subscriptions).push_back(function);
-    m_counters[Topic]++;
-    return m_counters[Topic];
+Messenger<Topics>::~Messenger()
+{
+    m_stop_source.request_stop();
 }
 
 template<typename Topics>
 template<std::size_t Topic>
-void Messenger<Topics>::publish(TypeList::Get<Topics, Topic> &&data)
+void Messenger<Topics>::subscribe(
+    std::function<void(const TypeList::Get<Topics, Topic> &)> &&function
+) {
+    // Lock the vector of callbacks for updating.
+    std::scoped_lock lock(std::get<Topic>(m_channels).mutex);
+    std::get<Topic>(m_channels).callbacks.push_back(
+        [function](void *message){
+            function(*static_cast<TypeList::Get<Topics, Topic>*>(message));
+        }
+    );
+}
+
+template<typename Topics>
+template<std::size_t Topic>
+void Messenger<Topics>::publish(TypeList::Get<Topics, Topic> &&message)
 {
-    for (auto &callback : std::get<Topic>(m_subscriptions))
-        callback(data);
+    {
+        std::scoped_lock lock(m_mutex);
+        m_queue.emplace_back(std::make_pair(
+            Topic,
+            std::make_shared<TypeList::Get<Topics, Topic>>(message)
+        ));
+    }
+
+    m_condition.notify_all();
+}
+
+template<typename Topics>
+void Messenger<Topics>::worker(std::stop_token stop)
+{
+    using namespace std::chrono_literals;
+
+    while (!stop.stop_requested()) {
+
+        // Pointer to the message when found.
+        std::shared_ptr<void> message {nullptr};
+
+        // The topic the message belongs to.
+        std::size_t topic {0};
+
+        // Lock on the channel to ensure no two threads are calling back on two
+        // messages at the same time and potentially out of order.
+        std::unique_lock<std::mutex> channel_lock {};
+
+        // If a message was found and needs to be processed. Prevents busy loop
+        // checking for messages in queue when no channel is able to be locked.
+        bool found = false;
+
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+
+            while (m_queue.empty()) {
+
+                // Wait until the stop is signalled or a message exists.
+                m_condition.wait(lock, stop, [&]{ return !m_queue.empty(); });
+
+                // Stop when requested.
+                if (stop.stop_requested()) {
+                    return;
+                }
+            }
+
+            // Find next available message.
+            for (auto it = m_queue.begin(); it != m_queue.end(); ++it) {
+
+                // If another thread has the topic lock then it will get this me
+                channel_lock = std::unique_lock(
+                    m_channels[it->first].mutex,
+                    std::try_to_lock
+                );
+
+                if (!channel_lock)
+                    continue;
+
+                // Remove the message from the queue.
+                std::tie(topic, message) = *it;
+                m_queue.erase(it);
+
+                // A message is ready to be processed.
+                found = true;
+                break;
+            }
+        }
+
+        // If no message was found to process then wait for a bit to prevent
+        // busy loop and continue.
+        if (!found) {
+            std::this_thread::sleep_for(1ms);
+            continue;
+        }
+
+        for (const auto &function : m_channels[topic].callbacks) {
+            if (stop.stop_requested())
+                return;
+
+            function(message.get());
+        }
+    }
 }
