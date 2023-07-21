@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tuple>
+#include <variant>
 
 namespace TypeList {
 
@@ -103,6 +104,20 @@ struct _Get<List, 0> : public _Front<List> {};
 template<typename List, unsigned I>
 using Get = _Get<List, I>::type;
 
+template <typename List, typename Type, unsigned I>
+struct _Index {
+    static_assert(I < Size<List>);
+    static const constexpr std::size_t value = I;
+    using type = std::conditional_t<
+        std::is_same_v<Front<List>, Type>,
+        Type,
+        _Index<PopFront<List>, Type, I + 1>
+    >;
+};
+
+template <typename List, typename Type>
+using Index = _Index<List, Type, 0>::value;
+
 // Concatenate two type lists together.
 
 template<typename Left, typename Right>
@@ -163,5 +178,21 @@ struct _Tuple<TypeList<Head, Tail...>> {
  */
 template<typename List>
 using TupleOf = _Tuple<List>::type;
+
+// Tuple.
+
+template<typename Head, typename... Tail>
+struct _Variant;
+
+template<typename Head, typename... Tail>
+struct _Variant<TypeList<Head, Tail...>> {
+    using type = std::variant<Head, Tail...>;
+};
+
+/**
+ * @brief Convert a type list to a tuple of those types.
+ */
+template<typename List>
+using VariantOf = _Variant<List>::type;
 
 } // namespace TypeList
