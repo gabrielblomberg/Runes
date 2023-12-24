@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <type_traits>
 #include <tuple>
 #include <ranges>
@@ -157,36 +158,6 @@ public:
     // Access
 
     /**
-     * @brief Get all the (key, vertex) of the graph.
-     */
-    inline auto vertices() {
-        return m_graph |
-            std::views::transform(
-                [](std::pair<const T, std::shared_ptr<Vertex>> &pair) {
-                    return pair;
-                }
-            );
-    }
-
-    /**
-     * @brief Get all the (key1, key2, edge) in the graph.
-     */ 
-    inline auto edges() {
-        return m_graph |
-            std::views::transform(
-                [](std::pair<const T, std::shared_ptr<Vertex>> &pair) {
-                    return pair.second->edges;
-                }
-            ) |
-            std::views::join |
-            std::views::transform(
-                [](std::pair<const T, std::shared_ptr<Edge>> &edge) -> Edge& {
-                    return *edge.second;
-                }
-            );
-    }
-
-    /**
      * @brief Get an iterator to a vertex.
      * 
      * @param key The key of the vertex to find.
@@ -294,6 +265,39 @@ public:
     bool remove_edge(const T &first, const T &second);
 
     // Querying.
+
+    /**
+     * @brief Get all the (key, vertex) of the graph.
+     */
+    inline auto vertices() {
+        return m_graph |
+            std::views::transform(
+                [](std::pair<const T, std::shared_ptr<Vertex>> &pair) {
+                    return pair;
+                }
+            );
+    }
+
+    /**
+     * @brief Get all the (key1, key2, edge) in the graph.
+     */
+    inline auto edges() {
+        // Oh my goodness. This should be using std::views::zip.
+        using TupleType = std::tuple<T, T, std::shared_ptr<Edge>>;
+        return m_graph |
+            std::views::transform(
+                [](std::pair<const T, std::shared_ptr<Vertex>> &pair) {
+                    return pair.second->edges | std::views::transform(
+                        [&pair](std::pair<const T, std::shared_ptr<Edge>> &edge) {
+                            return std::array<TupleType, 1>{
+                                std::make_tuple(pair.first, edge.first, edge.second)
+                            };
+                        }
+                    ) | std::views::join;
+                }
+            ) |
+            std::views::join;
+    }
 
     /**
      * @brief Get the total number of vertices.

@@ -29,7 +29,6 @@ void GameState::handle_click(const Message<CLICK> &click)
     auto lock = window.lock();
 
     Hexagon::Hexagon<int> hex = m_board.grid().to_hexagon(click.x, click.y);
-    std::cout << "Click " << hex << std::endl;
 
     if (click.button == 0)
         m_runes.perform<Runes::ActionType::PLACE_PLAYER_RUNE>(

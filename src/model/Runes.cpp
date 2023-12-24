@@ -38,10 +38,9 @@ template<>
 bool Runes::action<PLACE_PLAYER_RUNE>(ActionData<PLACE_PLAYER_RUNE> &data)
 {
     auto [it, success] = m_map.add_vertex(data.hexagon, Rune(RuneType::VITALITY, 0));
-    if (!success)
-        return false;
-
     m_map.add_edge(m_previous, data.hexagon);
+    m_map.add_edge(data.hexagon, m_previous);
+
     m_previous = data.hexagon;
     return true;
 }
