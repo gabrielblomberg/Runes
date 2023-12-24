@@ -6,8 +6,6 @@
 #include <unordered_map>
 #include <memory>
 
-// Node Edge Graph
-
 /**
  * @brief A hexagonal graph.
  * 
@@ -15,18 +13,58 @@
  * @tparam VertexType The type stored at each hexagonal location.
  * @tparam EdgeType The type stored at each edge.
  */
-template<typename T, typename VertexType, typename EdgeType = void>
+template<typename T, typename VertexType = void, typename EdgeType = void>
 class Graph
 {
 public:
 
-    // Forward declare NodeType for EdgeType::vertex;
-    struct Vertex;
+    // Forward declare types for conditional templating.
+    struct UnweightedVertex;
+    struct WeightedVertex;
+    struct UnweightedEdge;
+    struct WeightedEdge;
+
+    /**
+     * @brief The type representing a vertex on a graph.
+     */
+    using Vertex = std::conditional_t<std::is_void_v<VertexType>, UnweightedVertex, WeightedVertex>;
+
+    /**
+     * @brief The type representing an edge between two vertices.
+     */
+    using Edge = std::conditional_t<std::is_void_v<EdgeType>, UnweightedEdge, WeightedEdge>;
+
+    /**
+     * @brief The type containing vertex instances, each containing a mapping of
+     * edges.
+     */
+    using Map = std::unordered_map<T, std::shared_ptr<Vertex>>;
+
+    /**
+     * @brief A vertex defined only by its edges and the key to the vertex.
+     */
+    struct UnweightedVertex {
+
+        /// The edges that begin at this vertex.
+        std::unordered_map<T, std::shared_ptr<Edge>> edges;
+    };
+
+    /**
+     * @brief A vertex that contains some type.
+     */
+    struct WeightedVertex {
+
+        /// The edges that begin at this vertex.
+        std::unordered_map<T, std::shared_ptr<Edge>> edges;
+
+        /// Data contained in this vertex.
+        VertexType data;
+    };
 
     /**
      * @brief An edge without any additional data.
      */
-    struct BareEdge {
+    struct UnweightedEdge {
 
         /// Pointer to the vertex on the other side of the edge.
         std::weak_ptr<Vertex> vertex;
@@ -35,7 +73,7 @@ public:
     /**
      * @brief An edge with additional data.
      */
-    struct FullEdge {
+    struct WeightedEdge {
 
         /// Pointer to the vertex on the other side of the edge.
         std::weak_ptr<Vertex> vertex;
@@ -43,28 +81,6 @@ public:
         /// Data contained at this edge.
         EdgeType data;
     };
-
-    /**
-     * @brief An edge stores data associated to the edge, and a weak pointer to
-     * the node on the other side of the edge.
-     */
-    using Edge = std::conditional_t<std::is_void_v<EdgeType>, BareEdge, FullEdge>;
-
-    /**
-     * @brief The type of a node stored in the map, a vertex and a sequence of
-     * edges.
-     */
-    struct Vertex {
-
-        /// Data contained in this vertex.
-        VertexType data;
-
-        /// The edges that begin at this vertex.
-        std::unordered_map<T, std::shared_ptr<Edge>> edges;
-    };
-
-    /// The map stores the nodes at each vertex.
-    using Map = std::unordered_map<T, std::shared_ptr<Vertex>>;
 
     /**
      * @brief An iterator over the graph.
@@ -202,16 +218,30 @@ public:
     /**
      * @brief Add a vertex.
      * 
+     * For vertices that contain an element, the element must be default
+     * constructable.
+     * 
+     * @param key The vertex in the graph to add.
+     * @returns An iterator to the new vertex or end() if it failed to add, and
+     * a flag if the vertex was successfully added.
+     */
+    std::pair<Iterator, bool> add_vertex(const T &key);
+
+    /**
+     * @brief Add a vertex that contains an element.
+     * 
      * @param key The vertex in the graph to add.
      * @param value The data to store at the vertex.
      * 
-     * @returns An iterator to the new vertex, that is end() if it failed to
-     * insert.
+     * @returns An iterator to the new vertex or end() if it failed to add, and
+     * a flag if the vertex was successfully added.
      */
-    std::pair<Iterator, bool> add_vertex(
-        const T &key,
-        const VertexType &value
-    );
+    template<typename V>
+    std::enable_if_t<
+        std::is_same_v<V, VertexType> && !std::is_void_v<V>,
+        std::pair<Iterator, bool>
+    >
+    add_vertex(const T &key, const V &value);
 
     /**
      * @brief Remove a vertex.
@@ -247,7 +277,7 @@ public:
      */
     template<typename E>
     std::enable_if_t<
-        std::is_same_v<E, EdgeType> & !std::is_void_v<E>,
+        std::is_same_v<E, EdgeType> && !std::is_void_v<E>,
         std::pair<Iterator, bool>
     >
     add_edge(const T &first, const T &second, const E &edge);
@@ -394,15 +424,46 @@ Graph<T, VertexType, EdgeType>::at(const T &from, const T &to)
 
 template<typename T, typename VertexType, typename EdgeType>
 std::pair<typename Graph<T, VertexType, EdgeType>::Iterator, bool>
-Graph<T, VertexType, EdgeType>::add_vertex(
-    const T &key,
-    const VertexType &value
-) {
+Graph<T, VertexType, EdgeType>::add_vertex(const T &key)
+{
+    bool success = false;
+    decltype(Map::iterator) it;
+
+    if constexpr (std::is_void_v<VertexType>) {
+        std::tie(it, success) = m_graph.emplace(
+            key,
+            std::make_shared<Vertex>(
+                std::unordered_map<T, std::shared_ptr<Edge>>()
+            )
+        );
+    }
+    else {
+        std::tie(it, success) = m_graph.emplace(
+            key,
+            std::make_shared<Vertex>(
+                std::unordered_map<T, std::shared_ptr<Edge>>(), VertexType()
+            )
+        );
+    }
+
+    if (success)
+        return std::make_pair(Iterator(nullptr, it->second), true);
+
+    return std::make_pair(end(), false);
+}
+
+template<typename T, typename VertexType, typename EdgeType>
+template<typename V>
+std::enable_if_t<
+    std::is_same_v<V, VertexType> && !std::is_void_v<V>,
+    std::pair<typename Graph<T, VertexType, EdgeType>::Iterator, bool>
+>
+Graph<T, VertexType, EdgeType>::add_vertex(const T &key, const V &value) {
     // Add the vertex to the graph.
     auto [it, success] = m_graph.emplace(
         key,
         std::make_shared<Vertex>(
-            value, std::unordered_map<T, std::shared_ptr<Edge>>()
+            std::unordered_map<T, std::shared_ptr<Edge>>(), value
         )
     );
 
@@ -427,7 +488,7 @@ Graph<T, VertexType, EdgeType>::add_edge(const T &first, const T &second)
     if constexpr (std::is_void_v<EdgeType>) {
         v1->second->edges.emplace(
             second,
-            std::make_shared<Graph<T, VertexType, EdgeType>::BareEdge>(
+            std::make_shared<Graph<T, VertexType, EdgeType>::UnweightedEdge>(
                 v2->second
             )
         );
@@ -435,7 +496,7 @@ Graph<T, VertexType, EdgeType>::add_edge(const T &first, const T &second)
     else {
         v1->second->edges.emplace(
             second,
-            std::make_shared<Graph<T, VertexType, EdgeType>::FullEdge>(
+            std::make_shared<Graph<T, VertexType, EdgeType>::WeightedEdge>(
                 v2->second, EdgeType()
             )
         ); 
@@ -447,7 +508,7 @@ Graph<T, VertexType, EdgeType>::add_edge(const T &first, const T &second)
 template<typename T, typename VertexType, typename EdgeType>
 template<typename E>
 std::enable_if_t<
-    std::is_same_v<E, EdgeType> & !std::is_void_v<E>,
+    std::is_same_v<E, EdgeType> && !std::is_void_v<E>,
     std::pair<typename Graph<T, VertexType, EdgeType>::Iterator, bool>
 >
 Graph<T, VertexType, EdgeType>::add_edge(
@@ -466,7 +527,7 @@ Graph<T, VertexType, EdgeType>::add_edge(
         return std::make_pair(Iterator(), false);
 
     // Create the edge to add to the first vertex edges.
-    auto edge = std::make_shared<Graph<T, VertexType, EdgeType>::FullEdge>(
+    auto edge = std::make_shared<Graph<T, VertexType, EdgeType>::WeightedEdge>(
         data, b->second
     );
 
