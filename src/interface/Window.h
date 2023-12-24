@@ -91,7 +91,7 @@ public:
      * @brief Get a lock on the window.
      */
     inline WindowLock lock() {
-        return std::move(WindowLock(m_window.get(), &m_mutex));
+        return WindowLock(m_window.get(), &m_mutex);
     }
 
     /**

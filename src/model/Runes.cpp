@@ -33,3 +33,23 @@ bool Runes::action<GIVE_PLAYER_RUNE>(ActionData<GIVE_PLAYER_RUNE> &data)
 
     return true;
 }
+
+template<>
+bool Runes::action<PLACE_PLAYER_RUNE>(ActionData<PLACE_PLAYER_RUNE> &data)
+{
+    auto [it, success] = m_map.add_vertex(data.hexagon, Rune(RuneType::VITALITY, 0));
+    if (!success)
+        return false;
+
+    m_map.add_edge(m_previous, data.hexagon);
+    m_previous = data.hexagon;
+    return true;
+}
+
+template<>
+bool Runes::action<MOVE_PLAYER_RUNE>(ActionData<MOVE_PLAYER_RUNE> &data)
+{
+    m_map.remove_vertex(data.from);
+    m_previous = data.from;
+    return true;
+}

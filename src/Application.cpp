@@ -32,20 +32,30 @@ void Application::main()
 
         switch(event.type)
         {
-            case sf::Event::Closed : {
+            case sf::Event::Closed: {
                 m_stop.request_stop();
                 break;
             }
-            case sf::Event::KeyPressed : {
+            case sf::Event::KeyReleased:
+            case sf::Event::KeyPressed: {
                 if (event.key.code == sf::Keyboard::Key::Escape) {
                     m_stop.request_stop();
                 }
+                else {
+                    m_messenger.publish<KEY>(
+                        event.key.code,
+                        event.type == sf::Event::KeyPressed
+                    );
+                }
                 break;
             }
-            case sf::Event::MouseButtonPressed : {
+            case sf::Event::MouseButtonReleased:
+            case sf::Event::MouseButtonPressed: {
                 m_messenger.publish<CLICK>(
                     event.mouseButton.x,
-                    event.mouseButton.y
+                    event.mouseButton.y,
+                    event.type == sf::Event::MouseButtonPressed,
+                    event.mouseButton.button
                 );
                 break;
             }

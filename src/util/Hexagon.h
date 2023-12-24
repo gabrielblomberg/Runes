@@ -218,8 +218,6 @@ inline Hexagon<T> Hexagon<T>::neighbor(int direction) const noexcept {
 template<typename T>
 Hexagon<int> Hexagon<T>::round() const noexcept
 {
-    std::cout << "Before: " << q << ", " << r << ", " << s << std::endl;
-
     int round_q = std::round(q);
     int round_r = std::round(r);
     int round_s = std::round(s);
@@ -227,9 +225,6 @@ Hexagon<int> Hexagon<T>::round() const noexcept
     double q_diff = std::abs(q - std::round(q));
     double r_diff = std::abs(r - std::round(r));
     double s_diff = std::abs(s - std::round(s));
-
-    std::cout << "Rounded: " << round_q << ", " << round_r << ", " << round_s << std::endl;
-    std::cout << "Diffs: " << q_diff << ", " << r_diff << ", " << s_diff << std::endl;
 
     if (q_diff > r_diff && q_diff > s_diff)
         return Hexagon<int>(-round_r - round_s, round_r, round_s);
@@ -371,16 +366,10 @@ template<GridType Type>
 std::tuple<double, double> Grid<Type>::to_pixel(
     const Hexagon<int> &hexagon
 ) const {
-    std::cout << "Grid<Type>::to_pixel(" << hexagon << ")" << std::endl;
-
     double x = (
         Grid<Type>::Orientation::f0 * hexagon.q +
         Grid<Type>::Orientation::f1 * hexagon.r
     ) * std::get<0>(m_size);
-
-    std::cout << "(" << Grid<Type>::Orientation::f0 << " * " << hexagon.q << " + "
-             << Grid<Type>::Orientation::f1 << " * " << hexagon.r << ") * "
-             << std::get<0>(m_size) << " = " << x << std::endl;
 
     double y = (
         Grid<Type>::Orientation::f2 * hexagon.q +

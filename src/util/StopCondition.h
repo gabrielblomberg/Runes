@@ -93,7 +93,7 @@ public:
 private:
 
     /// Signal to stop waiting permanently.
-    std::stop_token const m_stop;
+    std::stop_token m_stop;
 
     /// Condition variable to wait on for stop signal
     std::condition_variable_any m_condition;

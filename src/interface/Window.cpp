@@ -18,6 +18,8 @@ Window::Window(std::string &&title)
         title.c_str(),
         sf::Style::Default
     );
+
+    m_window->setActive(false);
 }
 
 Window::~Window()

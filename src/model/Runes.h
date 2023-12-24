@@ -7,7 +7,8 @@
 #include <memory>
 #include <optional>
 
-#include "util/HexagonalGraph.h"
+#include "util/Graph.h"
+#include "util/Hexagon.h"
 
 class Runes
 {
@@ -21,7 +22,7 @@ public:
     /**
      * @brief The type of rune
      */
-    enum class Rune
+    enum class RuneType
     {
         VITALITY
     };
@@ -75,7 +76,7 @@ public:
          * @brief Get the runes that this player has not yet played.
          * @return The runes this player has not played.
          */
-        inline const std::unordered_map<Rune, std::size_t> runes() {
+        inline const std::unordered_map<RuneType, std::size_t> runes() {
             return m_runes;
         }
 
@@ -90,8 +91,23 @@ public:
         std::string m_name;
 
         /// The number of different runes this player has not yet played.
-        std::unordered_map<Rune, std::size_t> m_runes;
+        std::unordered_map<RuneType, std::size_t> m_runes;
     };
+
+    /**
+     * @brief A rune on the board.
+     */
+    struct Rune {
+
+        /// The type of rune.
+        RuneType type;
+
+        /// The owner of the rune.
+        std::size_t player_id;
+    };
+
+    /// Graph of hexagons containing a stack of player runes.
+    using RuneBoard = Graph<Hexagon::Hexagon<int>, Rune>;
 
     /**
      * @brief Generic structure containing actions performed in the game,
@@ -108,7 +124,10 @@ public:
      * @brief An action pointer is a pair of action type and a pointer to the
      * data of the action type.
      */
-    using Action = std::pair<ActionType, std::shared_ptr<void>>;
+    struct Action {
+        ActionType type;
+        std::shared_ptr<void> data;
+    };
 
     /**
      * @brief Perform an action in the game.
@@ -128,7 +147,16 @@ public:
      * @brief Get all the players that have been added to the game.
      * @return The current players.
      */
-    const std::vector<Player> &players();
+    inline const std::vector<Player> &players() const {
+        return m_players;
+    }
+
+    /**
+     * @brief Get the board of rune containing the pieces.
+     */
+    inline RuneBoard &board() {
+        return m_map;
+    }
 
 private:
 
@@ -152,20 +180,25 @@ private:
     std::optional<std::size_t> m_current_player;
 
     /// The current game state.
-    Hexagon::HexagonalGraph<std::list<Rune>> m_map;
+    RuneBoard m_map;
 
     /// History of actions performed in the game. Each pointer is interpreted
     /// as a tuple of the arguments for each action specialisation.
     std::vector<Action> m_history;
+
+    Hexagon::Hexagon<int> m_previous;
 };
 
 template<Runes::ActionType A, typename... Args>
 std::tuple<bool, Runes::Action> Runes::perform(Args&&... args)
 {
     auto data = std::make_shared<ActionData<A>>(std::forward<Args>(args)...);
-    auto action = std::make_pair(A, data);
+    Action action = {
+        .type = A,
+        .data = std::make_shared<ActionData<A>>(std::forward<Args>(args)...)
+    };
 
-    bool success = Runes::action<A>(*action.second);
+    bool success = Runes::action<A>(*(ActionData<A>*)action.data.get());
     if (success)
         m_history.push_back(action);
 
@@ -181,13 +214,20 @@ struct Runes::ActionData<Runes::ADD_PLAYER> {
 template<>
 struct Runes::ActionData<Runes::GIVE_PLAYER_RUNE> {
     std::size_t player_id;
-    Runes::Rune rune;
+    Runes::RuneType rune;
     std::size_t n;
 };
 
 template<>
 struct Runes::ActionData<Runes::PLACE_PLAYER_RUNE> {
     std::size_t player_id;
-    Runes::Rune rune;
+    Runes::RuneType rune;
     Hexagon::Hexagon<int> hexagon;
+};
+
+template<>
+struct Runes::ActionData<Runes::MOVE_PLAYER_RUNE> {
+    std::size_t player_id;
+    Hexagon::Hexagon<int> from;
+    Hexagon::Hexagon<int> to;
 };

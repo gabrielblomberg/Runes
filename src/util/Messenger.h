@@ -72,9 +72,7 @@ public:
     template<std::size_t Topic, typename... Args>
     inline void publish(Args&&... args) {
         publish<Topic>(
-            TypeList::Get<Topics, Topic>(
-                std::forward<Args>(args)...
-            )
+            TypeList::Get<Topics, Topic>(std::forward<Args>(args)...)
         );
     }
 

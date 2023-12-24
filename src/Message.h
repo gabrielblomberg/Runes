@@ -6,7 +6,8 @@
  * @brief Messages sent in the program.
  */
 enum MessageType {
-    CLICK
+    CLICK,
+    KEY
 };
 
 /**
@@ -21,16 +22,33 @@ struct Message;
  * 
  * @param x The pixel x coordinate.
  * @param y The pixel y coordinate.
+ * @param pressed If the click was pressed or released.
+ * @param button The button pressed (primary, secondary, etc).
  */
 template<>
 struct Message<CLICK> {
     int x;
     int y;
+    bool pressed;
+    int button;
+};
+
+/**
+ * @brief A message that a key was pressed or released.
+ * 
+ * @param key The key pressed or released.
+ * @param pressed True if pressed or false if released.
+ */
+template<>
+struct Message<KEY> {
+    char key;
+    bool pressed;
 };
 
 /**
  * @brief Topics available for messaging.
  */
 using Topics = TypeList::TypeList<
-    Message<CLICK>
+    Message<CLICK>,
+    Message<KEY>
 >;

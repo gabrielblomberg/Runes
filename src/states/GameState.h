@@ -4,7 +4,7 @@
 
 #include "model/Runes.h"
 #include "interface/Window.h"
-#include "interface/GameView.h"
+#include "interface/Board.h"
 
 class GameState : public State
 {
@@ -26,13 +26,13 @@ private:
     /**
      * @brief Handle a click.
      */
-    void handle_click(Message<CLICK> click);
+    void handle_click(const Message<CLICK> &click);
 
     /// The game model.
     Runes m_runes;
 
     /// The of the game.
-    GameView m_view;
+    Board m_board;
 
     /// The view of the thread.
     std::jthread m_view_thread;

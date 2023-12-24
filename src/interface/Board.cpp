@@ -1,11 +1,7 @@
 #include "interface/Board.h"
 
-Board::Board(
-        Vector2i size,
-        Vector2i position,
-        Vector2d hexagon_size
-  ) : m_size(size)
-    , m_position(position)
+Board::Board(Vector2i size, Vector2d hexagon_size)
+    : m_size(size)
     , m_texture()
     , m_grid()
     , m_view()
@@ -25,7 +21,7 @@ Board::Board(
     m_view.setCenter(m_size.x / 2, m_size.y / 2);
 
     // Define the hexagonal grid to have the same size d
-    m_grid = Hexagon::Grid(
+    m_grid = Hexagon::Grid<Hexagon::GridType::FLAT>(
         hexagon_size.x,
         hexagon_size.y,
         size.x / 2,
@@ -36,25 +32,33 @@ Board::Board(
     m_hexagon.setPointCount(6);
     for (int i = 0; i < 6; i++) {
         auto [x, y] = m_grid.corner_offset(i);
-        m_hexagon.setPoint(i, sf::Vector2f(x, y));
+        m_hexagon.setPoint(i, sf::Vector2f(x * 0.95, y * 0.95));
     }
 }
 
-void Board::draw(Window &window, Runes &runes)
+void Board::draw(Runes &runes)
 {
+    m_texture.clear();
     m_hexagon.setFillColor(sf::Color::Black);
     m_hexagon.setOutlineColor(sf::Color::White);
     m_hexagon.setOutlineThickness(1);
     m_texture.setView(m_view);
 
-    for (int x = 0; x < m_size.x; x += 50) {
-        for (int y = 0; y < m_size.y; y += 50) {
-            m_hexagon.setPosition(x, y);
-            m_texture.draw(m_hexagon);
+    for (const auto &[a, vertex] : runes.board().vertices()) {
+        draw_hexagon(a);
+        auto [x0, y0] = m_grid.to_pixel(a);
+
+        for (const auto &[b, edge] : vertex->edges) {
+            auto [x1, y1] = m_grid.to_pixel(b);
+
+            sf::Vertex line[] = {
+                sf::Vertex(sf::Vector2f(x0, y0)),
+                sf::Vertex(sf::Vector2f(x1, y1))
+            };
+
+            m_texture.draw(line, 2, sf::Lines);
         }
     }
-
-    display(window);
 }
 
 void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon)
