@@ -67,6 +67,20 @@ public:
      */
     using Successors = std::function<std::vector<State>(const State &)>;
 
+    /// The type of the frontier, a deque or a priority queue.
+    using Frontier = std::conditional_t<
+        std::is_void_v<Compare>,
+        std::deque<Node*>,
+        std::priority_queue<Node*, std::vector<Node*>, std::function<bool(const Node*, const Node*)>>
+    >;
+
+    /// Hash type to hash a node pointer using the node hash function.
+    struct Hash {
+        std::size_t operator()(const Node* const &node) const {
+            return std::hash<Node>{}(*node);
+        }
+    };
+
     /**
      * @brief Create a new search problem
      * 
@@ -132,18 +146,7 @@ protected:
 
     /// The frontier of vertices to search through. A deque if not comparing
     /// search states or a priority queue if search states can be compared.
-    std::conditional_t<
-        std::is_void_v<Compare>,
-        std::deque<Node*>,
-        std::priority_queue<Node*, std::vector<Node*>, Compare>
-    > m_frontier;
-
-    /// Hash type to hash a node pointer using the node hash function.
-    struct Hash {
-        std::size_t operator()(const Node* const &node) const {
-            return std::hash<Node>{}(*node);
-        }
-    };
+    Frontier m_frontier;
 
     // The set of visited search nodes that should not be revisited.
     std::unordered_set<Node*, Hash> m_visited;
@@ -160,8 +163,20 @@ Search<Node, State, Compare>::Search(
     , m_frontier()
     , m_visited()
 {
+    if constexpr (!std::is_void_v<Compare>) {
+        m_frontier = Frontier(
+            [](const Node *l, const Node *r){ return Compare{}(*l, *r); }
+        );
+    }
+
     m_nodes.push_back(std::make_unique<Node>(initial));
-    m_frontier.push_back(m_nodes.back().get());
+
+    if constexpr (std::is_void_v<Compare>) {
+        m_frontier.push_back(m_nodes.back().get());
+    }
+    else {
+        m_frontier.push(m_nodes.back().get());
+    }
 }
 
 template<typename Node, typename State, typename Compare>
@@ -186,8 +201,17 @@ bool Search<Node, State, Compare>::frontier_push(Node *node)
 template<typename Node, typename State, typename Compare>
 Node *Search<Node, State, Compare>::frontier_pop()
 {
-    Node *node = m_frontier.front();
-    m_frontier.pop_front();
+    Node *node;
+
+    if constexpr (std::is_void_v<Compare>) {
+        node = m_frontier.front();
+        m_frontier.pop_front();
+    }
+    else {
+        node = m_frontier.top();
+        m_frontier.pop();
+    }
+
     return node;
 }
 
@@ -244,8 +268,16 @@ Search<Node, State, Compare>::perform()
 
         // For memory saving.
         m_nodes.clear();
-        m_frontier.clear();
         m_visited.clear();
+
+        if constexpr (!std::is_void_v<Compare>) {
+            m_frontier = Frontier(
+                [](const Node *l, const Node *r){ return Compare{}(*l, *r); }
+            );
+        }
+        else {
+            m_frontier.clear();
+        }
 
         // Convert to start to finish ordering.
         std::reverse(trace.begin(), trace.end());
@@ -260,7 +292,10 @@ Search<Node, State, Compare>::perform()
  */
 template<typename State>
 class BFS : public Search<SearchNode<State>, State, void>
-{};
+{
+    using Node = SearchNode<State>;
+    using Search<Node, State, void>::Search;
+};
 
 /**
  * @brief Depth first search. Search tree traversed depth first.
@@ -348,14 +383,27 @@ public:
             Search<Node, State, void>::Checker is_goal
       ) : Search<Node, State, void>(initial, successor, is_goal)
         , m_initial_state(initial)
-        , m_cutoff(3)
-        , m_deepen(false)
+        , m_maximum_search_depth(3)
+        , m_increase_search_depth(false)
     {}
 
 private:
 
+    /**
+     * @brief Checks if the frontier is empty, and restarts the algorithm if
+     * the cutoff is reached and the frontier is empty.
+     * 
+     * @returns If the frontier is empty.
+     */
     bool frontier_empty() override;
 
+    /**
+     * @brief Pushes a node to the frontier only if it does not exceed the
+     * search depth limit.
+     * 
+     * @param node The node to push to the frontier. 
+     * @returns If the node does not exceed the maximum search depth.
+     */
     bool frontier_push(Node *node) override;
 
     /**
@@ -364,6 +412,7 @@ private:
      */
     Node *frontier_pop() override;
 
+    using Frontier = Search<Node, State, void>::Frontier;
     using Search<Node, State, void>::m_nodes;
     using Search<Node, State, void>::m_frontier;
     using Search<Node, State, void>::m_visited;
@@ -372,10 +421,10 @@ private:
     State m_initial_state;
 
     /// The cutoff of tree depth before restarting the search.
-    int m_cutoff;
+    int m_maximum_search_depth;
 
     /// Whether to restart the search.
-    bool m_deepen;
+    bool m_increase_search_depth;
 };
 
 template<typename State>
@@ -386,19 +435,19 @@ bool IDDFS<State>::frontier_empty()
 
     // If the frontier is empty and the depth limit was reached, restart with
     // a deeper index.
-    if (m_deepen) {
-        m_deepen = false;
+    if (m_increase_search_depth) {
+        m_increase_search_depth = false;
 
         // Clear old search tree.
         m_nodes.clear();
-        m_frontier.clear();
         m_visited.clear();
+        m_frontier = Frontier();
 
         // Instantiate the new search tree.
         m_nodes.push_back(std::move(std::make_unique<Node>(m_initial_state)));
         m_frontier.push_back(m_nodes.back().get());
-        m_cutoff += 1;
 
+        m_maximum_search_depth += 1;
         return false;
     }
 
@@ -410,8 +459,8 @@ bool IDDFS<State>::frontier_push(Node *node)
 {
     // If the search depth has been reached then increase the maximum tree depth
     // once the frontier becomes empty.
-    if (node->k > m_cutoff) {
-        m_deepen = true;
+    if (node->k > m_maximum_search_depth) {
+        m_increase_search_depth = true;
         return false;
     }
 
@@ -425,3 +474,63 @@ typename IDDFS<State>::Node *IDDFS<State>::frontier_pop()
     m_frontier.pop_back();
     return node;
 }
+
+/**
+ * @brief An IDDFS node keeps track of its height in the search tree.
+ */
+template<typename State>
+struct UCSNode {
+
+    UCSNode() = default;
+
+    UCSNode(
+            State state,
+            UCSNode<State> *parent
+      ) : state(state)
+        , parent(parent)
+        , cost(parent->cost + state.cost)
+    {}
+
+    UCSNode(State state)
+        : state(state)
+        , parent(nullptr)
+        , cost(0)
+    {}
+
+    /**
+     * @brief Ordering of UCS nodes is done base on the cost.
+     */
+    auto operator<=>(const UCSNode<State> &other) const {
+        return cost <=> other.cost;
+    };
+
+    /// The state of the search node.
+    State state;
+
+    /// The parent search node.
+    UCSNode<State> *parent;
+
+    /// The total cost to get to this search node.
+    int cost;
+};
+
+// Hash of a search state for storing in a mapping.
+template<>
+template<typename State>
+struct std::hash<UCSNode<State>>
+{
+    std::size_t operator()(const UCSNode<State> &node) const {
+        return std::hash<State>{}(node.state) ^ (std::hash<int>{}(node.cost) << 1);
+    }
+};
+
+/**
+ * @brief Uniform cost search.
+ */
+template<typename State, typename Compare = std::greater<>>
+class UCS : public Search<UCSNode<State>, State, Compare>
+{
+public:
+    using Node = UCSNode<State>;
+    using Search<Node, State, Compare>::Search;
+};
