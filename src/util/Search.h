@@ -130,7 +130,18 @@ protected:
     virtual std::unique_ptr<Node> make_node(
         const State &state,
         Node *parent = nullptr
-    );
+    ) = 0;
+
+    /// TODO: The above should not be pure virtual, but should have the
+    /// following default definition. Adding a default somehow hides all the
+    /// overriden definitions.
+    ///
+    /// virtual std::unique_ptr<Node> make_node(
+    ///     const State &state,
+    ///     Node *parent = nullptr
+    /// ) {
+    ///     return std::make_unique<Node>(state, parent);
+    /// };
 
     /**
      * @brief Clear all data structures for restarting the search or reducing
@@ -196,14 +207,6 @@ Search<Node, State, Compare>::Search(
         );
     }
 }
-
-template<typename Node, typename State, typename Compare>
-std::unique_ptr<Node> Search<Node, State, Compare>::make_node(
-    const State &state,
-    Node *parent
-) {
-    return std::make_unique<Node>(state, parent);
-};
 
 template<typename Node, typename State, typename Compare>
 void Search<Node, State, Compare>::clear()
@@ -325,7 +328,24 @@ class BFS : public Search<SearchNode<State>, State, void>
 {
     using Node = SearchNode<State>;
     using Search<Node, State, void>::Search;
+
+private:
+
+    /// @TODO: Remove in favour of virtual default.
+    std::unique_ptr<Node> make_node(
+        const State &state,
+        Node *parent = nullptr
+    ) override;
 };
+
+/// @TODO: Remove in favour of virtual default.
+template<typename State>
+std::unique_ptr<SearchNode<State>> BFS<State>::make_node(
+    const State &state,
+    Node *parent
+) {
+    return std::make_unique<Node>(state, parent);
+}
 
 /**
  * @brief Depth first search. Search tree traversed depth first.
@@ -340,6 +360,12 @@ public:
 
 private:
 
+    /// @TODO: Remove in favour of virtual default.
+    std::unique_ptr<Node> make_node(
+        const State &state,
+        Node *parent = nullptr
+    ) override;
+
     /**
      * @brief Pop the newest search node added to the frontier.
      * @returns The newest node on the frontier.
@@ -348,6 +374,15 @@ private:
 
     using Search<Node, State, void>::m_frontier;
 };
+
+/// @TODO: Remove in favour of virtual default.
+template<typename State>
+std::unique_ptr<SearchNode<State>> DFS<State>::make_node(
+    const State &state,
+    Node *parent
+) {
+    return std::make_unique<Node>(state, parent);
+}
 
 template<typename State>
 typename DFS<State>::Node* DFS<State>::frontier_pop()
@@ -445,6 +480,12 @@ private:
     using Search<Node, State, void>::make_node;
     using Search<Node, State, void>::clear;
 
+    /// @TODO: Remove in favour of virtual default.
+    std::unique_ptr<Node> make_node(
+        const State &state,
+        Node *parent = nullptr
+    ) override;
+
     /**
      * @brief Checks if the frontier is empty, and restarts the algorithm if
      * the cutoff is reached and the frontier is empty.
@@ -479,6 +520,15 @@ private:
     /// Whether to restart the search.
     bool m_increase_search_depth;
 };
+
+/// @todo: Remove in favour of virtual default
+template<typename State>
+std::unique_ptr<IDDFSNode<State>> IDDFS<State>::make_node(
+    const State &state,
+    Node *parent
+) {
+    return std::make_unique<Node>(state, parent);
+}
 
 template<typename State>
 bool IDDFS<State>::frontier_empty()
@@ -588,7 +638,24 @@ class UCS : public Search<UCSNode<State, Cost>, State, Compare>
 public:
     using Node = UCSNode<State, Cost>;
     using Search<Node, State, Compare>::Search;
+
+private:
+
+    /// @todo: Remove in favour of virtual default.
+    std::unique_ptr<Node> make_node(
+        const State &state,
+        Node *parent = nullptr
+    ) override;
 };
+
+/// @todo: Remove in favour of virtual default
+template<typename State, typename Cost, typename Compare>
+std::unique_ptr<UCSNode<State, Cost>> UCS<State, Cost, Compare>::make_node(
+    const State &state,
+    Node *parent
+) {
+    return std::make_unique<Node>(state, parent);
+}
 
 template<typename State, typename Cost>
 struct AStarNode {
