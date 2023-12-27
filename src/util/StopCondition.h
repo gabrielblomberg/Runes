@@ -16,12 +16,47 @@ class StopCondition
 public:
 
     /**
+     * @brief Inherit the stop source of another stop condition.
+     * 
+     * @param other The other stop condition.
+     */
+    StopCondition(const StopCondition &other)   
+        : m_stop(other.m_stop)
+    {}
+
+    /**
      * @brief Create a new stop condition from a stop token.
      * @param stop The stop token to stop waiting on when requested.
      */
     StopCondition(std::stop_token stop)
         : m_stop(stop)
     {}
+
+    /**
+     * @brief Check the stop is requested.
+     * @return If the stop is requested.
+     */
+    inline operator bool(){
+        return m_stop.stop_requested();
+    }
+
+    /**
+     * @brief Get the stop token of the stop condition.
+     * @return The stop token used in the stop condition.
+     */
+    inline std::stop_token get_token() {
+        return m_stop;
+    }
+
+    /**
+     * @brief 
+     * 
+     * @return true 
+     * @return false 
+     */
+    inline bool stop_requested() {
+        return m_stop.stop_requested();
+    }
 
     /**
      * @brief Wait for stop signal.

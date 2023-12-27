@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+using namespace std::chrono_literals;
+
 namespace Time {
 
 using Clock = std::chrono::high_resolution_clock;

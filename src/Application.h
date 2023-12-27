@@ -12,7 +12,7 @@ class Application;
 /**
  * @brief An application state, such as main menu or game screen.
  */
-class State
+class ApplicationState
 {
 public:
 
@@ -20,7 +20,7 @@ public:
      * @brief Create a new application state.
      * @param application Pointer to the main application instance.
      */
-    State(Application *application, std::stop_token stop)
+    ApplicationState(Application *application, std::stop_token stop)
         : m_handle(application)
         , m_stop(stop)
     {}
@@ -30,7 +30,7 @@ public:
      * 
      * @return The next state, or nullptr on application exit.
      */
-    virtual std::unique_ptr<State> main() = 0;
+    virtual std::unique_ptr<ApplicationState> main() = 0;
 
 protected:
 
@@ -88,7 +88,7 @@ private:
     Messenger<Topics> m_messenger;
 
     /// State of the application.
-    std::unique_ptr<State> m_state;
+    std::unique_ptr<ApplicationState> m_state;
 
     /// Thread running the application.
     std::jthread m_state_thread;

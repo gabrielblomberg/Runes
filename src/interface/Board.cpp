@@ -74,12 +74,12 @@ void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon)
     m_texture.draw(m_hexagon);
 }
 
-void Board::display(Window &window)
+void Board::display(sf::RenderWindow &window)
 {
     m_texture.display();
 
     sf::Sprite sprite;
     sprite.setTexture(m_texture.getTexture());
-    window->setView(m_view);
-    window->draw(sprite);
+    window.setView(m_view);
+    window.draw(sprite);
 }

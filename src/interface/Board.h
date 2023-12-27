@@ -48,7 +48,7 @@ public:
      * 
      * @param window The window to display the board to.
      */
-    void display(Window &window);
+    void display(sf::RenderWindow &window);
 
 private:
 

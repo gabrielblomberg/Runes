@@ -40,6 +40,13 @@ public:
     }
 
     /**
+     * @brief Get a reference to the locked window.
+     */
+    inline sf::RenderWindow &operator*() {
+        return *m_window;
+    }
+
+    /**
      * @brief Get a pointer to the locked window.
      */
     inline sf::RenderWindow *get() {

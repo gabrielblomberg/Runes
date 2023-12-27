@@ -5,9 +5,10 @@
 #include "interface/Button.h"
 #include "model/Runes.h"
 #include "util/Vector2.h"
+#include "util/Time.h"
 
 GameState::GameState(Application *app, std::stop_token stop)
-    : State(app, stop)
+    : ApplicationState(app, stop)
     , m_runes()
     , m_board(
         Vector2i(app->window()->getSize().x, app->window()->getSize().y),
@@ -21,12 +22,13 @@ GameState::GameState(Application *app, std::stop_token stop)
     m_handle->messenger().subscribe<CLICK>(
         [this](const Message<CLICK> &m) { handle_click(m); }
     );
+
+    m_render_thread = std::jthread(&GameState::render_thread, this);
 }
 
 void GameState::handle_click(const Message<CLICK> &click)
 {
-    auto &window = m_handle->window();
-    auto lock = window.lock();
+    std::scoped_lock<std::mutex> lock(m_mutex);
 
     Hexagon::Hexagon<int> hex = m_board.grid().to_hexagon(click.x, click.y);
 
@@ -36,14 +38,29 @@ void GameState::handle_click(const Message<CLICK> &click)
         );
     else
         m_runes.perform<Runes::ActionType::MOVE_PLAYER_RUNE>(0, hex, hex);
-
-    window->clear();
-    m_board.draw(m_runes);
-    m_board.display(window);
-    window->display();
 }
 
-std::unique_ptr<State> GameState::main()
+void GameState::render_thread()
+{
+    // ~144Hz
+    static Time::Duration delta = 7ms;
+
+    while (!m_stop) {
+
+        {
+            std::scoped_lock<std::mutex> lock(m_mutex);
+            auto window = m_handle->window().lock();
+            window->clear();
+            m_board.draw(m_runes);
+            m_board.display(*window);
+            window->display();
+        }
+
+        m_stop.wait_until(Time::now() + delta);
+    }
+}
+
+std::unique_ptr<ApplicationState> GameState::main()
 {
     m_stop.wait();
     return nullptr;
