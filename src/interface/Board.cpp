@@ -32,7 +32,7 @@ Board::Board(Vector2i size, Vector2d hexagon_size)
     m_hexagon.setPointCount(6);
     for (int i = 0; i < 6; i++) {
         auto [x, y] = m_grid.corner_offset(i);
-        m_hexagon.setPoint(i, sf::Vector2f(x * 0.95, y * 0.95));
+        m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
     }
 }
 
@@ -61,12 +61,12 @@ void Board::draw(Runes &runes)
     }
 }
 
-void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon)
+void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)
 {
     auto [x, y] = m_grid.to_pixel(hexagon);
 
     m_hexagon.setPosition(x, y);
-    m_hexagon.setFillColor(sf::Color::White);
+    m_hexagon.setFillColor(colour);
     m_hexagon.setOutlineColor(sf::Color::Black);
     m_hexagon.setOutlineThickness(2);
 

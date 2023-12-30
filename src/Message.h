@@ -7,7 +7,8 @@
  */
 enum MessageType {
     CLICK,
-    KEY
+    KEY,
+    MOUSE
 };
 
 /**
@@ -46,9 +47,22 @@ struct Message<KEY> {
 };
 
 /**
+ * @brief The mouse moved to a location.
+ * 
+ * @param x The pixel x coordinate.
+ * @param y The pixel y coordinate.
+ */
+template<>
+struct Message<MOUSE> {
+    int x;
+    int y;
+};
+
+/**
  * @brief Topics available for messaging.
  */
 using Topics = TypeList::TypeList<
     Message<CLICK>,
-    Message<KEY>
+    Message<KEY>,
+    Message<MOUSE>
 >;

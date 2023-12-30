@@ -3,6 +3,8 @@
 #include <cmath>
 #include <type_traits>
 
+#include <SFML/System/Vector2.hpp>
+
 template<typename T>
 class Vector2
 {
@@ -21,51 +23,43 @@ public:
         return std::sqrt(x * x + y * y);
     }
 
+    template<typename U>
+    Vector2<std::common_type_t<T, U>> operator+(const Vector2<U> &other) {
+        return {x + other.x, y + other.y};
+    }
+
+    template<typename U>
+    Vector2<std::common_type_t<T, U>> operator-(const Vector2<U> &other) {
+        return {x - other.x, y - other.y};
+    }
+
+    template<typename U>
+    Vector2<std::common_type_t<T, U>> operator*(const Vector2<U> &other) {
+        return {x * other.x, y * other.y};
+    }
+
+    template<typename U>
+    Vector2<std::common_type_t<T, U>> operator*(U factor) {
+        return {x * factor, y * factor};
+    }
+
+    template<typename U>
+    Vector2<std::common_type_t<T, U>> operator/(const Vector2<U> &other) {
+        return {x / other.x, y / other.y};
+    }
+
+    template<typename U>
+    Vector2<std::common_type_t<T, U>> operator/(U factor) {
+        return {x / factor, y / factor};
+    }
+
+    template<typename U>
+    operator sf::Vector2<U>() {
+        return sf::Vector2<U>(x, y);
+    }
+
     T x, y;
 };
-
-template<typename T, typename U>
-Vector2<std::common_type_t<T, U>> operator+(
-    const Vector2<T> &first,
-    const Vector2<U> &second
-) {
-    return {first.x + second.x, first.y + second.y};
-}
-
-template<typename T, typename U>
-Vector2<std::common_type_t<T, U>> operator-(
-    const Vector2<T> &first,
-    const Vector2<U> &second
-) {
-    return {first.x - second.x, first.y - second.y};
-}
-
-template<typename T, typename U>
-Vector2<std::common_type_t<T, U>> operator*(
-    const Vector2<T> &first,
-    const Vector2<U> &second
-) {
-    return {first.x * second.x, first.y * second.y};
-}
-
-template<typename T, typename U>
-Vector2<std::common_type_t<T, U>> operator*(const Vector2<T> &first, U second) {
-    return {first.x * second, first.y * second};
-}
-
-template<typename T, typename U>
-Vector2<std::common_type_t<T, U>> operator/(
-    const Vector2<T> &first,
-    const Vector2<U> &second
-) {
-    return {first.x / second.x, first.y / second.y};
-}
-
-template<typename T, typename U>
-Vector2<std::common_type_t<T, U>> operator/(const Vector2<T> &first, U second)
-{
-    return {first.x / second, first.y / second};
-}
 
 template<typename T>
 std::ostream &operator<<(std::ostream &out, Vector2<T> vector2)

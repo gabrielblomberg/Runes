@@ -59,6 +59,13 @@ void Application::main()
                 );
                 break;
             }
+            case sf::Event::MouseMoved: {
+                m_messenger.publish<MOUSE>(
+                    event.mouseMove.x,
+                    event.mouseMove.y
+                );
+                break;
+            }
             default: break;
         }
     }

@@ -32,6 +32,12 @@ public:
      */
     virtual std::unique_ptr<ApplicationState> main() = 0;
 
+    /**
+     * @brief Allow states inheriting from the application state to define their
+     * own destructors.
+     */
+    virtual ~ApplicationState() {}
+
 protected:
 
     /// Pointer to the main application instance.

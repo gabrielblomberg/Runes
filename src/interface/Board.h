@@ -41,7 +41,10 @@ public:
     /**
      * @brief Draw a single hexagon to the window.
      */
-    void draw_hexagon(Hexagon::Hexagon<int> hexagon);
+    void draw_hexagon(
+        Hexagon::Hexagon<int> hexagon,
+        sf::Color colour = sf::Color::White
+    );
 
     /**
      * @brief Display the board to a window.

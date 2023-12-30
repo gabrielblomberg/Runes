@@ -243,26 +243,24 @@ std::ostream &operator<<(std::ostream &out, Hexagon::Hexagon<T> hexagon)
     return out << "Hexagon(" << hexagon.q << ", " << hexagon.r << ")";
 }
 
-namespace std {
-    template<typename T>
-    struct hash<Hexagon::Hexagon<T>>
+template<>
+template<typename T>
+struct std::hash<Hexagon::Hexagon<T>>
+{
+    std::size_t operator()(const Hexagon::Hexagon<T>& hexagon) const noexcept
     {
-        size_t operator()(const Hexagon::Hexagon<T>& hexagon) const noexcept
-        {
-            size_t hq = hash<T>{}(hexagon.q);
-            size_t hr = hash<T>{}(hexagon.r);
-            return hq ^ (hr + 0x9e3779b9 + (hq << 6) + (hq >> 2));
-        }
-    };
-}
+        size_t hq = hash<T>{}(hexagon.q);
+        size_t hr = hash<T>{}(hexagon.r);
+        return hq ^ (hr + 0x9e3779b9 + (hq << 6) + (hq >> 2));
+    }
+};
 
 namespace Hexagon {
 
 // Hexagon Grids
 
 /**
- * @brief 
- * 
+ * @brief The grid orientation.
  */
 enum class GridType {
     POINTY,
