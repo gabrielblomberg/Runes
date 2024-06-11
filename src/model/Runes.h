@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "util/Graph.h"
+#include "util/Search.h"
 #include "util/Hexagon.h"
 
 class Runes
@@ -27,6 +28,9 @@ public:
         VITALITY
     };
 
+    /**
+     * @brief The actions that can be performed in the game.
+     */
     enum class ActionType
     {
         ADD_PLAYER,
@@ -35,11 +39,13 @@ public:
         PLACE_PLAYER_RUNE
     };
 
+    using enum RuneType;
     using enum ActionType;
 
     /**
-     * @brief A player in the game that owns a collection of runes that they
-     * are able to place.
+     * @brief A player in the game.
+     * 
+     * Each player owns a collection of runes that they are able to place.
      */
     class Player
     {
@@ -76,7 +82,7 @@ public:
          * @brief Get the runes that this player has not yet played.
          * @return The runes this player has not played.
          */
-        inline const std::unordered_map<RuneType, std::size_t> runes() {
+        inline const std::unordered_map<RuneType, std::size_t> &runes() {
             return m_runes;
         }
 
@@ -107,7 +113,7 @@ public:
     };
 
     /// Graph of hexagons containing a stack of player runes.
-    using RuneBoard = Graph<Hexagon::Hexagon<int>, Rune>;
+    using Board = Graph<Hexagon::Hexagon<int>, Rune>;
 
     /**
      * @brief Generic structure containing actions performed in the game,
@@ -154,8 +160,8 @@ public:
     /**
      * @brief Get the board of rune containing the pieces.
      */
-    inline RuneBoard &board() {
-        return m_map;
+    inline Board &board() {
+        return m_board;
     }
 
 private:
@@ -172,21 +178,31 @@ private:
     template<ActionType A>
     bool action(ActionData<A> &data);
 
-    /// A collection of the players in order of turns.
+    bool connected();
+
+    bool rune_moveable(Hexagon::Hexagon<int> hex);
+
+    /**
+     * @brief Returns the neighbors of a hexagon in the graph.
+     * 
+     * Used in the search algorithm.
+     * 
+     * @param hex The hexagon to get neighbors of.
+     * @return The neighboring hexagons.
+     */
+    std::vector<Hexagon::Hexagon<int>> neighbors(Hexagon::Hexagon<int> hex);
+
+    /// Players in the order of turns.
     std::vector<Player> m_players;
 
-    /// The identifier of the players whose turn it is. Empty when the game has
-    /// not started.
+    /// The current player. Empty when game has not started.
     std::optional<std::size_t> m_current_player;
 
-    /// The current game state.
-    RuneBoard m_map;
+    /// The game space.
+    Board m_board;
 
-    /// History of actions performed in the game. Each pointer is interpreted
-    /// as a tuple of the arguments for each action specialisation.
+    /// History of actions performed in the game.
     std::vector<Action> m_history;
-
-    Hexagon::Hexagon<int> m_previous;
 };
 
 template<Runes::ActionType A, typename... Args>
