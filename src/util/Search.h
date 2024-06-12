@@ -1,8 +1,11 @@
-#include <unordered_set>
-#include <queue>
-#include <optional>
-#include <vector>
+#include <initializer_list>
+#include <functional>
 #include <memory>
+#include <optional>
+#include <queue>
+#include <type_traits>
+#include <unordered_set>
+#include <vector>
 
 /**
  * @brief A node in the search tree that contains data pertaining to the
@@ -50,7 +53,7 @@ struct std::hash<SearchNode<State>>
 /**
  * @brief A search strategy.
  * 
- * @tparam Node the derived class of Search.
+ * @tparam Node the derived class of SearchNode.
  * @tparam State The type of state being searched through.
  * @tparam Compare The comparator that orders search nodes in the frontier. If
  * this is void, then a standard deque is used without insertion ordering.
@@ -91,21 +94,27 @@ public:
     /**
      * @brief Create a new search problem
      * 
-     * @param initial The initial state.
      * @param successor A function that takes a state and returns all subsequent
      * states.
      * @param is_goal A function that takes a state and returns if that state is
      * the goal state.
+     * @param visited Optionally, the states that have already been visited.
      */
-    Search(State initial, Successors successor, Checker is_goal);
+    Search(Successors successor, Checker is_goal);
 
     /**
      * @brief Perform the search operation.
      * 
+     * @param start The state to start searching from.
+     * @param visited Optionally, the already visited states.
+     * 
      * @return A sequence of states to the goal or std::nullopt if no solution
      * exists.
      */
-    std::optional<std::vector<std::unique_ptr<Node>>> perform();
+    virtual std::optional<std::vector<std::unique_ptr<Node>>> perform(
+        State start,
+        std::initializer_list<State> visited = {}
+    );
 
     /**
      * @brief Get all the states visited during the search.
@@ -172,6 +181,9 @@ protected:
     /// The initial state.
     State m_initial;
 
+    /// The initially visited nodes.
+    std::vector<State> m_initial_visited;
+
     /// Function that returns the subsequent states of a state.
     Successors m_successors;
 
@@ -190,12 +202,8 @@ protected:
 };
 
 template<typename Node, typename State, typename Compare>
-Search<Node, State, Compare>::Search(
-        State initial,
-        Successors successors,
-        Checker is_goal
-  ) : m_initial(initial)
-    , m_successors(successors)
+Search<Node, State, Compare>::Search(Successors successors, Checker is_goal)
+    : m_successors(successors)
     , m_is_goal(is_goal)
     , m_nodes()
     , m_frontier()
@@ -266,16 +274,28 @@ Node *Search<Node, State, Compare>::frontier_pop()
 
 template<typename Node, typename State, typename Compare>
 std::optional<std::vector<std::unique_ptr<Node>>>
-Search<Node, State, Compare>::perform()
-{
-    // Initialisation that cannot be done in the constructor.
-    m_nodes.push_back(make_node(m_initial));
+Search<Node, State, Compare>::perform(
+    State start,
+    std::initializer_list<State> visited
+) {
+    // Initialisation that cannot be done in the constructor due to virtual
+    // functions.
 
+    // Add the initial search node.
+    m_nodes.push_back(make_node(start));
+
+    // Add the initial search tree node to the frontier.
     if constexpr (std::is_void_v<Compare>) {
         m_frontier.push_back(m_nodes.back().get());
     }
     else {
         m_frontier.push(m_nodes.back().get());
+    }
+
+    // Add already visited states to the visited set.
+    for (const State &state : visited) {
+        m_nodes.emplace_back(make_node(state));
+        m_visited.emplace(m_nodes.back().get());
     }
 
     // The current node being visited.
@@ -475,6 +495,20 @@ public:
         , m_increase_search_depth(false)
     {}
 
+    /**
+     * @brief Perform the search operation.
+     * 
+     * @param start The state to start searching from.
+     * @param visited Optionally, the already visited states.
+     * 
+     * @return A sequence of states to the goal or std::nullopt if no solution
+     * exists.
+     */
+    std::optional<std::vector<std::unique_ptr<Node>>> perform(
+        State start,
+        std::initializer_list<State> visited = {}
+    ) override;
+
 private:
 
     using Search<Node, State, void>::make_node;
@@ -509,10 +543,15 @@ private:
      */
     Node *frontier_pop() override;
 
-    using Search<Node, State, void>::m_initial;
     using Search<Node, State, void>::m_nodes;
     using Search<Node, State, void>::m_frontier;
     using Search<Node, State, void>::m_visited;
+
+    /// The initial state.
+    State m_initial;
+
+    /// The initially visited states.
+    std::vector<State> m_initial_visited;
 
     /// The cutoff of tree depth before restarting the search.
     int m_maximum_search_depth;
@@ -520,6 +559,19 @@ private:
     /// Whether to restart the search.
     bool m_increase_search_depth;
 };
+
+template<typename State>
+std::optional<std::vector<std::unique_ptr<IDDFSNode<State>>>>
+IDDFS<State>::perform(
+    State start,
+    std::initializer_list<State> visited
+) {
+    // Store the initial state for restarts.
+    m_initial = start;
+    m_initial_visited = visited;
+
+    return Search<Node, State, void>::perform(start, visited);
+}
 
 /// @todo: Remove in favour of virtual default
 template<typename State>
@@ -544,9 +596,14 @@ bool IDDFS<State>::frontier_empty()
         // Clear old search tree.
         clear();
 
-        // Instantiate the new search tree.
+        // Restart the search.
         m_nodes.push_back(make_node(m_initial));
         m_frontier.push_back(m_nodes.back().get());
+
+        for (const State &state : m_initial_visited) {
+            m_nodes.push_back(make_node(state));
+            m_visited.emplace(m_nodes.back().get());
+        }
 
         m_maximum_search_depth += 1;
         return false;

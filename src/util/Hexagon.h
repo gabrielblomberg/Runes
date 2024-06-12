@@ -207,12 +207,21 @@ inline T Hexagon<T>::distance(const Hexagon<T> &hexagon) const noexcept {
 
 template<typename T>
 inline const Hexagon<T> &Hexagon<T>::direction(int direction) noexcept {
-    return Hexagon<T>::DIRECTIONS[direction];
+    return DIRECTIONS[(6 + (direction % 6)) % 6];
 }
 
 template<typename T>
 inline Hexagon<T> Hexagon<T>::neighbor(int direction) const noexcept {
-    return *this + Hexagon<T>::DIRECTIONS[(6 + (direction % 6)) % 6];
+    return *this + this->direction(direction);
+}
+
+template<typename T>
+inline std::array<Hexagon<T>, 6> Hexagon<T>::neighbors() const noexcept {
+    return {
+        *this + DIRECTIONS[0], *this + DIRECTIONS[1],
+        *this + DIRECTIONS[2], *this + DIRECTIONS[3],
+        *this + DIRECTIONS[4], *this + DIRECTIONS[5],
+    };
 }
 
 template<typename T>

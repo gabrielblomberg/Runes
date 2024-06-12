@@ -87,8 +87,7 @@ public:
      * @brief An iterator over the graph.
      * 
      * This iterator doesn't conform to standard c++ iterators since it has
-     * no types and no operator++(), and so is treated as just another class
-     * denoted by the capitalisation.
+     * no types and no operator++(), and so is treated as just another class.
      */
     class Iterator
     {
@@ -103,6 +102,14 @@ public:
         void move(const T &to);
 
         /**
+         * @brief Get the key of vertex, if the vertex exists.
+         * @return The key of the vertex.
+         */
+        inline T key() const {
+            return m_key;
+        }
+
+        /**
          * @brief Get the previously traversed edge.
          * @return A pointer to the previously traversed edge.
          */
@@ -114,16 +121,24 @@ public:
          * @brief Get the previously traversed edge.
          * @return A pointer to the previously traversed edge.
          */
-        inline const Vertex &vertex() const {
+        inline Vertex &vertex() const {
             return *m_vertex.lock();
         };
+
+        /**
+         * @brief Check if the iterator has a key.
+         * @returns If the iterator has a key.
+         */
+        inline bool has_key() const {
+            return has_vertex();
+        }
 
         /**
          * @brief Check if the iterator points to a nonexistant vertex.
          * @returns If this iterator points to a non existant vertex.
          */
         inline bool has_edge() const {
-            return m_edge.expired();
+            return !m_edge.expired();
         }
 
         /**
@@ -131,7 +146,21 @@ public:
          * @returns If this iterator points to a non existant vertex.
          */
         inline bool has_vertex() const {
-            return m_vertex.expired();
+            return !m_vertex.expired();
+        }
+
+        /**
+         * @brief Check if two iterators are equal.
+         * 
+         * @param other The other iterator.
+         * @returns If the two iterators are equal.
+         */
+        inline bool operator==(const Iterator &other) const {
+            return (
+                has_vertex() &&
+                other.has_vertex() &&
+                m_vertex.lock() == other.m_vertex.lock()
+            );
         }
 
     private:
@@ -141,16 +170,20 @@ public:
         /**
          * @brief Create a new iterator for the graph, starting 
          * 
-         * @param edge The edge previously traversed to get to the vertex.
-         * @param vertex The vertex.
+         * @param key The key of the vertex.
+         * @param vertex The vertex being pointed to.
+         * @param edge The edge previously traversed edge to get to the vertex.
          */
-        Iterator(std::shared_ptr<Edge> edge, std::shared_ptr<Vertex> vertex);
+        Iterator(T key, std::shared_ptr<Vertex> vertex, std::shared_ptr<Edge> edge);
 
-        /// Previous edge being pointed to.
-        std::weak_ptr<Edge> m_edge;
+        // The key of the vertex, if it is valid.
+        T m_key;
 
         /// Vertex being pointed to.
         std::weak_ptr<Vertex> m_vertex;
+
+        /// Previous edge being pointed to.
+        std::weak_ptr<Edge> m_edge;
     };
 
     Graph();
@@ -176,12 +209,27 @@ public:
     Iterator at(const T &first, const T &second);
 
     /**
+     * @brief Get an iterator to a vertex in the graph.
+     * 
+     * The iterator may point to any vertex.
+     * 
+     * To iterate over the whole graph, use edges() and verticies().
+     * 
+     * @returns An iterator to a vertex in the graph.
+     */
+    inline Iterator begin() {
+        if (m_graph.empty())
+            return end();
+        return at(m_graph.begin()->first);
+    }
+
+    /**
      * @brief The placeholder iterator for the end of the graph.
      * 
      * @return Iterator 
      */
     inline Iterator end() {
-        return Iterator(nullptr, nullptr);
+        return Iterator(T{}, nullptr, nullptr);
     }
 
     // Mutation.
@@ -267,6 +315,18 @@ public:
     // Querying.
 
     /**
+     * @brief Get all the keys of the graph.
+     */
+    inline auto keys() {
+        return m_graph |
+            std::views::transform(
+                [](std::pair<const T, std::shared_ptr<Vertex>> &pair) {
+                    return pair.first;
+                }
+            );
+    }
+
+    /**
      * @brief Get all the (key, vertex) of the graph.
      */
     inline auto vertices() {
@@ -297,6 +357,31 @@ public:
                 }
             ) |
             std::views::join;
+    }
+
+    /**
+     * @brief Check if the map contains a vertex at the provided key.
+     * 
+     * @param key The key of the vertex.
+     * @returns If the graph contains a vertex at the key.
+     */
+    inline bool contains_vertex(T key) const {
+        return m_graph.contains(key);
+    }
+
+    /**
+     * @brief Check if the map contains an edge between the provided keys.
+     * 
+     * @param first The first vertex of the edge.
+     * @param second The second vertex of the edge.
+     * 
+     * @returns If an edge exists between the verticies.
+     */
+    inline bool contains_edge(T first, T second) const {
+        auto it = m_graph.find(first);
+        if (it == m_graph.end())
+            return false;
+        return it->edges.contains(second);
     }
 
     /**
@@ -363,10 +448,12 @@ private:
 
 template<typename T, typename VertexType, typename EdgeType>
 Graph<T, VertexType, EdgeType>::Iterator::Iterator(
-        std::shared_ptr<Edge> edge,
-        std::shared_ptr<Vertex> vertex
-  ) : m_edge(edge)
+        T key,
+        std::shared_ptr<Vertex> vertex,
+        std::shared_ptr<Edge> edge
+  ) : m_key(key)
     , m_vertex(vertex)
+    , m_edge(edge)
 {}
 
 template<typename T, typename VertexType, typename EdgeType>
@@ -404,7 +491,7 @@ Graph<T, VertexType, EdgeType>::at(const T &key)
     if (it == m_graph.end())
         return end();
 
-    return Iterator(nullptr, it->second);
+    return Iterator(key, it->second, nullptr);
 }
 
 template<typename T, typename VertexType, typename EdgeType>
@@ -423,7 +510,7 @@ Graph<T, VertexType, EdgeType>::at(const T &from, const T &to)
     if (edge == edges.end())
         return end();
 
-    return Iterator(edge, edge->vertex);
+    return Iterator(to, edge->vertex, edge);
 }
 
 template<typename T, typename VertexType, typename EdgeType>
@@ -451,7 +538,7 @@ Graph<T, VertexType, EdgeType>::add_vertex(const T &key)
     }
 
     if (success)
-        return std::make_pair(Iterator(nullptr, it->second), true);
+        return std::make_pair(Iterator(key, it->second, nullptr), true);
 
     return std::make_pair(end(), false);
 }
@@ -462,7 +549,8 @@ std::enable_if_t<
     std::is_same_v<V, VertexType> && !std::is_void_v<V>,
     std::pair<typename Graph<T, VertexType, EdgeType>::Iterator, bool>
 >
-Graph<T, VertexType, EdgeType>::add_vertex(const T &key, const V &value) {
+Graph<T, VertexType, EdgeType>::add_vertex(const T &key, const V &value)
+{
     // Add the vertex to the graph.
     auto [it, success] = m_graph.emplace(
         key,
@@ -472,7 +560,7 @@ Graph<T, VertexType, EdgeType>::add_vertex(const T &key, const V &value) {
     );
 
     if (success)
-        return std::make_pair(Iterator(nullptr, it->second), true);
+        return std::make_pair(Iterator(key, it->second, nullptr), true);
 
     return std::make_pair(end(), false);
 }
@@ -489,20 +577,19 @@ Graph<T, VertexType, EdgeType>::add_edge(const T &first, const T &second)
     if (v2 == m_graph.end())
         return std::make_pair(end(), false);
 
+    using UnweightedEdge = Graph<T, VertexType, EdgeType>::UnweightedEdge;
+    using WeightedEdge = Graph<T, VertexType, EdgeType>::WeightedEdge;
+
     if constexpr (std::is_void_v<EdgeType>) {
         v1->second->edges.emplace(
             second,
-            std::make_shared<Graph<T, VertexType, EdgeType>::UnweightedEdge>(
-                v2->second
-            )
+            std::make_shared<UnweightedEdge>(v2->second)
         );
     }
     else {
         v1->second->edges.emplace(
             second,
-            std::make_shared<Graph<T, VertexType, EdgeType>::WeightedEdge>(
-                v2->second, EdgeType()
-            )
+            std::make_shared<WeightedEdge>(v2->second, EdgeType())
         ); 
     }
 
@@ -523,12 +610,12 @@ Graph<T, VertexType, EdgeType>::add_edge(
     // Find the first vertex.
     auto a = m_graph.find(first);
     if (a == m_graph.end())
-        return std::make_pair(Iterator(), false);
+        return std::make_pair(end(), false);
 
     // Find the second vertex.
     auto b = m_graph.find(second);
-    if (second == m_graph.end())
-        return std::make_pair(Iterator(), false);
+    if (b == m_graph.end())
+        return std::make_pair(end(), false);
 
     // Create the edge to add to the first vertex edges.
     auto edge = std::make_shared<Graph<T, VertexType, EdgeType>::WeightedEdge>(
@@ -538,9 +625,9 @@ Graph<T, VertexType, EdgeType>::add_edge(
     // Add the edge to the first vertex edges.
     auto [_, success] = a->second.emplace(edge);
     if (!success)
-        return std::make_pair(Iterator(), false);
+        return std::make_pair(end(), false);
 
-    return std::make_pair(Iterator(b->second, edge), true);
+    return std::make_pair(Iterator(second, b->second, edge), true);
 }
 
 template<typename T, typename VertexType, typename EdgeType>
