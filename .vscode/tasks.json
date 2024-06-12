@@ -1,27 +1,33 @@
 {
     "version": "2.0.0",
     "tasks": [
-        {
-            "label": "Compile Debug",
-			"type": "shell",
-			"problemMatcher":"$gcc",
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": true,
-				"panel": "dedicated",
-				"showReuseMessage": true,
-				"clear": true
-			},
-            "args": ["debug"],
-			"options": { "cwd": "${workspaceFolder}/scripts" },
-			"windows": { "command": ".\\compile.bat", },
-			"linux"  : { "command": "./compile.bash" }
+		{
+            "label": "Setup",
+            "detail": "Setup a new development environment.",
+            "type": "shell",
+            "windows": {
+                "command": "call scripts/windows/setup.bat"
+            },
+            "linux": {
+                "command": "./scripts/linux/setup.bash"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         },
         {
-            "label": "Compile Release",
+            "label": "Compile",
+			"detail": "Compile the most recently configure build",
 			"type": "shell",
-			"problemMatcher":"$gcc",
+			"windows": {
+				"command": "call scripts/windows/compile.bat ${config:user_build_release}",
+				"problemMatcher": "$msCompile"
+			},
+			"linux"  : {
+				"command": "./scripts/linux/compile.bash",
+                "problemMatcher": "$gcc"
+			},
 			"presentation": {
 				"echo": true,
 				"reveal": "always",
@@ -30,25 +36,55 @@
 				"showReuseMessage": true,
 				"clear": true
 			},
-            "args": ["release"],
-			"options": { "cwd": "${workspaceFolder}/scripts" },
-			"windows": { "command": ".\\compile.bat", },
-			"linux"  : { "command": "./compile.bash" }
+			"options": {
+                "cwd": "${workspaceFolder}",
+            },
         },
         {
 			"label": "Configure",
+			"detail": "Generate build files.",
 			"type": "shell",
-			"problemMatcher": [],
-			"options": { "cwd": "${workspaceFolder}/scripts" },
-			"windows": { "command": ".\\configure.bat" },
-			"linux"  : { "command": "./configure.bash"}
+			"windows": {
+                "command": "call scripts/windows/configure.bat"
+            },
+			"linux"  : {
+                "command": "./configure.bash"
+            },
+			"options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [],
 		},
+		{
+            "label": "Clean",
+            "detail": "Remove the build files and directory.",
+            "type": "shell",
+            "linux": {
+                "command": "rm -rf ${workspaceFolder}/build "
+            },
+            "windows": {
+                "command": "rd /S /Q build"
+            },
+            "problemMatcher": []
+        },
         {
             "label": "Execute",
             "type": "shell",
             "problemMatcher": [],
-            "windows": { "command": ".\\bin\\runes.exe" },
-			"linux"  : { "command": "./bin/configure.bash"}
+            "windows": {
+                "command": ".\\install\\runes.exe"
+            },
+			"linux"  : {
+                "command": "./install/runes"
+            }
         }
     ]
 }

@@ -7,7 +7,7 @@ cd ..
 sed -i 's/\.\///g' source.txt
 sed -i 's/ /\ /g' source.txt
 
-INCLUDE="-Isrc -Ilib/SFML/include"
+INCLUDE="-Isrc"
 SFML="-lsfml-graphics -lsfml-window -lsfml-network -lsfml-system"
 FLAGS="-Wall -Werror -Wpedantic"
 

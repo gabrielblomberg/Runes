@@ -1,7 +1,6 @@
-bin
-lib
-source.txt
-.vscode/settings.json
+vcpkg
+build
+install
 
 # Prerequisites
 *.d

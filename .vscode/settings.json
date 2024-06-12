@@ -1,0 +1,16 @@
+{
+    // Change to true for release builds and false for debug builds.
+    "user_build_release": false,
+
+    // Default terminals
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "terminal.integrated.defaultProfile.linux": "bash",
+
+    // Intellisense and editor style.
+    "C_Cpp.default.cppStandard": "gnu++20",
+    "editor.rulers": [80, 120],
+
+    // Annoying extensions.
+    "cmake.configureOnOpen": false,
+    "C_Cpp.autoAddFileAssociations": false,
+}
