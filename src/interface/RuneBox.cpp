@@ -1,14 +1,10 @@
 #include "interface/RuneBox.h"
 
-RuneBox::RuneBox(Vector2i dimensions, int hexagon_diameter)
-    : m_radius(dimensions / 2)
-    , m_hexagon_diameter(hexagon_diameter)
-    , m_spaces(
-        (m_radius.x / (m_hexagon_diameter) - 1),
-        (m_radius.y / (m_hexagon_diameter) - 1)
-    )
+RuneBox::RuneBox(Vector2i dimensions, int hexagon_diameter, Vector2i centre)
+    : m_hexagon_diameter(hexagon_diameter)
 {
-    m_maximum = m_spaces.x * m_spaces.y;
+    set_dimensions(dimensions);
+    set_position(centre);
 
     // Define the hexagonal grid to have the same size d
     auto grid = Hexagon::Grid<Hexagon::GridType::POINTY>(
@@ -20,10 +16,20 @@ RuneBox::RuneBox(Vector2i dimensions, int hexagon_diameter)
 
     // Create a hexagon that will be drawn.
     m_hexagon.setPointCount(6);
+    m_hexagon.setFillColor(sf::Color::White);
+    m_hexagon.setOutlineColor(sf::Color::Black);
+    m_hexagon.setOutlineThickness(2);
+
     for (int i = 0; i < 6; i++) {
         auto [x, y] = grid.corner_offset(i);
         m_hexagon.setPoint(i, sf::Vector2f(x, y));
     }
+
+    m_background = sf::RectangleShape(dimensions);
+    m_background.setFillColor(sf::Color::Black);
+    m_background.setOutlineColor(sf::Color::White);
+    m_background.setOutlineThickness(2);
+    m_background.setPosition(m_centre.x - m_radius.x, m_centre.y - m_radius.y);
 }
 
 bool RuneBox::add(Runes::RuneType type)
@@ -45,7 +51,7 @@ void RuneBox::remove(Runes::RuneType type)
 
     if (it == m_tiles.end())
         return;
-
+ 
     m_tiles.erase(it);
 }
 
@@ -54,34 +60,33 @@ std::optional<Runes::RuneType> RuneBox::get(Vector2i position)
     return std::nullopt;
 }
 
-void RuneBox::draw(sf::RenderTarget &target, Vector2i position)
+void RuneBox::draw(sf::RenderTarget &target)
 {
-    auto background = sf::RectangleShape(m_radius * 2.0);
-    background.setFillColor(sf::Color::Black);
-    background.setOutlineColor(sf::Color::White);
-    background.setPosition(position.x - m_radius.x, position.y - m_radius.y);
-    background.setOutlineThickness(2);
-    target.draw(background);
+    target.draw(m_background);
 
     for (std::size_t index = 0; index < m_tiles.size(); index++) {
-
-        int i = index % m_spaces.x;
-        int j = index / m_spaces.x;
-
-        int x = position.x - m_radius.x + (
-            1.5 * m_hexagon_diameter + // Left padding
-            i * (2 * m_hexagon_diameter + m_hexagon_diameter / m_spaces.x)
-        );
-
-        int y = position.y - m_radius.y + (
-            1.5 * m_hexagon_diameter + // Top padding
-            j * (2 * m_hexagon_diameter + m_hexagon_diameter / m_spaces.y)
-        );
-
-        m_hexagon.setPosition(x, y);
-        m_hexagon.setFillColor(sf::Color::White);
-        m_hexagon.setOutlineColor(sf::Color::Black);
-        m_hexagon.setOutlineThickness(2);
+        Vector2i pixel = to_pixel(index);
+        m_hexagon.setPosition(pixel.x, pixel.y);
         target.draw(m_hexagon);
     }
+}
+
+void RuneBox::set_dimensions(Vector2i dimensions)
+{
+    m_radius = dimensions / 2;
+    m_background.setPosition(m_centre.x - m_radius.x, m_centre.y - m_radius.y);
+    m_background.setSize(dimensions);
+
+    m_spaces = Vector2i{
+        (m_radius.x / (m_hexagon_diameter) - 1),
+        (m_radius.y / (m_hexagon_diameter) - 1)
+    };
+
+    m_maximum = m_spaces.x * m_spaces.y;
+}
+
+void RuneBox::set_position(Vector2i centre)
+{
+    m_centre = centre;
+    m_background.setPosition(m_centre.x - m_radius.x, m_centre.y - m_radius.y);
 }

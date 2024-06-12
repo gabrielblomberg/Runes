@@ -4,8 +4,9 @@
 
 #include "Message.h"
 #include "util/Messenger.h"
-#include "interface/Window.h"
 #include "util/StopCondition.h"
+#include "util/ControlSet.h"
+#include "interface/Window.h"
 
 class Application;
 
@@ -98,4 +99,7 @@ private:
 
     /// Thread running the application.
     std::jthread m_state_thread;
+
+    /// Handle main application events.
+    ControlSet m_global_controls;
 };

@@ -59,6 +59,9 @@ void Board::draw(Runes &runes)
             m_texture.draw(line, 2, sf::Lines);
         }
     }
+
+    for (auto &[hex, colour] : m_highlights)
+        draw_hexagon(hex, colour);
 }
 
 void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)

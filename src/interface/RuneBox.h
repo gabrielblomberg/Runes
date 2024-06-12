@@ -22,8 +22,13 @@ public:
      *  
      * @param dimensions The dimensions of the rune box in pixels.
      * @param hexagon_size The radius of the hexagon in pixels.
+     * @param position The centre position to draw the box on the screen.
      */
-    RuneBox(Vector2i dimensions, int hexagon_size);
+    RuneBox(
+        Vector2i dimensions,
+        int hexagon_size,
+        Vector2i position = Vector2i{0, 0}
+    );
 
     /**
      * @brief Create a new rune box containing runes.
@@ -37,6 +42,21 @@ public:
         Vector2i hexagon_size,
         std::initializer_list<Runes::RuneType> runes
     );
+
+    /**
+     * @brief Set the dimensions and update the rune box capacity with the new
+     * size.
+     * 
+     * @param dimensions The pixel width and height of the rune box.
+     */
+    void set_dimensions(Vector2i dimensions);
+
+    /**
+     * @brief Set the centre position of the rune box.
+     * 
+     * @param centre The pixel centre of the box.
+     */
+    void set_position(Vector2i centre);
 
     /**
      * @brief Add a rune to the box.
@@ -68,15 +88,32 @@ public:
      * 
      * @param target The target to draw the box onto.
      */
-    void draw(sf::RenderTarget &target, Vector2i position);
+    void draw(sf::RenderTarget &target);
 
 private:
 
+    inline Vector2i to_pixel(std::size_t index) {
+        return (Vector2d)(
+            m_centre - m_radius +
+            1.5 * m_hexagon_diameter + // Padding.
+            Vector2i{(int)index % m_spaces.x, (int)index / m_spaces.x} / m_spaces * // Index
+            2 * m_hexagon_diameter + m_hexagon_diameter
+        );
+    }
+
+    // inline std::size_t to_rune(Vector2i position) {
+    //     return (
+    //         position / (2 * m_hexagon_diameter) - m_hexagon_diameter)
+    //         / (1.5 * m_hexagon_diameter)
+    //         + m_radius - m_centre
+    //     );
+    // }
+
+    /// The centre position of the box.
+    Vector2i m_centre;
+
     /// The dimensions of the box in pixels.
     Vector2i m_radius;
-
-    // The radius of the hexagon in pixels.
-    int m_hexagon_diameter;
 
     /// The maximum tiles in each row.
     Vector2i m_spaces;
@@ -87,6 +124,12 @@ private:
     /// All the tiles in the box.
     std::vector<Runes::RuneType> m_tiles;
 
+    // The radius of the hexagon in pixels.
+    int m_hexagon_diameter;
+
     /// The hexagon shape draw.
     sf::ConvexShape m_hexagon;
+
+    // The background of the box.
+    sf::RectangleShape m_background;
 };

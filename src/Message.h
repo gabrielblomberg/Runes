@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/TypeList.h"
+#include "SFML/Window/Event.hpp"
 
 /**
  * @brief Messages sent in the program.

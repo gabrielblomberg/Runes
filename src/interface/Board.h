@@ -47,6 +47,27 @@ public:
     );
 
     /**
+     * @brief Add highlight to a hexagon.
+     * 
+     * @param hexagon The hexagon to add highlight to.
+     * @param colour The colour of the highlight.
+     */
+    void add_highlight(Hexagon::Hexagon<int> hexagon, sf::Color colour)
+    {
+        m_highlights[hexagon] = colour;
+    }
+
+    /**
+     * @brief Remove highlight from a hexagon.
+     * 
+     * @param hexagon The hexagon to remove highlight from.
+     */
+    inline void remove_highlight(Hexagon::Hexagon<int> hexagon)
+    {
+        m_highlights.erase(hexagon);
+    }
+
+    /**
      * @brief Display the board to a window.
      * 
      * @param window The window to display the board to.
@@ -57,6 +78,9 @@ private:
 
     /// The size of the board in pixels.
     Vector2i m_size;
+
+    /// Hexagons to highlight.
+    std::unordered_map<Hexagon::Hexagon<int>, sf::Color> m_highlights;
 
     /// The texture to draw the board onto, that is then drawn to the window.
     sf::RenderTexture m_texture;

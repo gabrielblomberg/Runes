@@ -9,12 +9,15 @@
 
 GameState::GameState(Application *app, std::stop_token stop)
     : ApplicationState(app, stop)
-    , m_screen_pixels(app->window()->getSize().x,app->window()->getSize().y)
-    , m_runes()
     , m_board(
         Vector2i(app->window()->getSize().x, app->window()->getSize().y),
-        Vector2d(20, 20))
-    , m_box(Vector2i(10 * 20, 6 * 20), 20)
+        Vector2d(20, 20)
+    )
+    , m_box(
+        Vector2i(10 * 20, 6 * 20),
+        20,
+        Vector2i(app->window()->getSize().x / 2, 4 * app->window()->getSize().y / 5)
+    )
 {
     auto size = app->window()->getSize();
     m_screen_pixels = Vector2i(size.x, size.y);
@@ -54,11 +57,13 @@ void GameState::handle_click(const Message<CLICK> &click)
 
 void GameState::handle_mouse(const Message<MOUSE> &mouse)
 {
+    static Hexagon::Hexagon<int> last;
     std::scoped_lock<std::mutex> lock(m_mutex);
-    m_board.draw_hexagon(
-        m_board.grid().to_hexagon(mouse.x, mouse.y),
-        sf::Color(50, 50, 50, 100)
-    );
+
+    Hexagon::Hexagon<int> current = m_board.grid().to_hexagon(mouse.x, mouse.y);
+    m_board.remove_highlight(last);
+    m_board.add_highlight(current, sf::Color(50, 50, 50, 100));
+    last = current;
 }
 
 void GameState::render_thread()
@@ -72,9 +77,9 @@ void GameState::render_thread()
             std::scoped_lock<std::mutex> lock(m_mutex);
             auto window = m_handle->window().lock();
             window->clear();
-            m_board.draw(m_runes);
 
-            m_box.draw(*window, m_screen_pixels / 2);
+            m_box.draw(*window);
+            m_board.draw(m_runes);
 
             m_board.display(*window);
             window->display();
