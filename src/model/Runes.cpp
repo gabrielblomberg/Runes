@@ -11,9 +11,10 @@ std::vector<Hexagon::Hexagon<int>> Runes::neighbors(Hexagon::Hexagon<int> hex)
     if (it == m_board.end())
         return {};
 
-    std::vector<Hexagon::Hexagon<int>> hexes {6};
-    for (auto [key, vertex] : it.vertex().edges)
+    std::vector<Hexagon::Hexagon<int>> hexes;
+    for (auto [key, vertex] : it.vertex().edges) {
         hexes.push_back(key);
+    }
 
     return hexes;
 }
@@ -34,7 +35,7 @@ bool Runes::connected()
     s.perform(it.key());
 
     for (auto hex : m_board.keys()) {
-        if (!m_board.contains_vertex(hex))
+        if (!s.visited().contains(hex))
             return false;
     }
 

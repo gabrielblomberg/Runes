@@ -82,14 +82,6 @@ public:
         >
     >;
 
-    /// Hash a node pointer using the node hash function. Used in the set of
-    /// visited nodes.
-    struct Hash {
-        std::size_t operator()(const Node* const &node) const {
-            return std::hash<Node>{}(*node);
-        }
-    };
-
     /**
      * @brief Create a new search problem
      * 
@@ -123,7 +115,7 @@ public:
     /**
      * @brief Get all the states visited during the search.
      */
-    inline const std::unordered_set<Node> &visited() {
+    inline const std::unordered_set<State> &visited() {
         return m_visited;
     }
 
@@ -202,7 +194,7 @@ protected:
     Frontier m_frontier;
 
     // The set of visited search nodes that should not be revisited.
-    std::unordered_set<Node*, Hash> m_visited;
+    std::unordered_set<State> m_visited;
 };
 
 template<typename Node, typename State, typename Compare>
@@ -245,10 +237,6 @@ bool Search<Node, State, Compare>::frontier_empty()
 template<typename Node, typename State, typename Compare>
 bool Search<Node, State, Compare>::frontier_push(Node *node)
 {
-    // Only push to the frontier if the search node has not been visited yet.
-    if (m_visited.find(node) != m_visited.end())
-        return false;
-
     if constexpr (std::is_void_v<Compare>) {
         m_frontier.push_back(node);
     }
@@ -297,10 +285,7 @@ Search<Node, State, Compare>::perform(
     }
 
     // Add already visited states to the visited set.
-    for (const State &state : visited) {
-        m_nodes.emplace_back(make_node(state));
-        m_visited.emplace(m_nodes.back().get());
-    }
+    m_visited.insert(visited.begin(), visited.end());
 
     // The current node being visited.
     Node *node = nullptr;
@@ -316,14 +301,19 @@ Search<Node, State, Compare>::perform(
         if ((found = m_is_goal(node->state)))
             break;
 
-        m_visited.emplace(node);
+        m_visited.emplace(node->state);
 
         // Get the next node of each state.
         for (const State &next_state : m_successors(node->state)) {
+
+            // Filter out already visited states.
+            if (m_visited.contains(next_state))
+                continue;
+
+            // Create the node.
             auto next_node = make_node(next_state, node);
 
-            // If the node was pushed onto the frontier then maintain
-            // the unique pointer to it.
+            // Maintain a unique pointer to it.
             if (frontier_push(next_node.get()))
                 m_nodes.push_back(std::move(next_node));
         }
@@ -603,10 +593,7 @@ bool IDDFS<State>::frontier_empty()
         m_nodes.push_back(make_node(m_initial));
         m_frontier.push_back(m_nodes.back().get());
 
-        for (const State &state : m_initial_visited) {
-            m_nodes.push_back(make_node(state));
-            m_visited.emplace(m_nodes.back().get());
-        }
+        m_visited.insert(m_initial_visited.begin(), m_initial_visited.end());
 
         m_maximum_search_depth += 1;
         return false;
@@ -618,9 +605,6 @@ bool IDDFS<State>::frontier_empty()
 template<typename State>
 bool IDDFS<State>::frontier_push(Node *node)
 {
-    if (m_visited.find(node) != m_visited.end())
-        return false;
-
     // If the search depth has been reached then increase the maximum tree depth
     // once the frontier becomes empty.
     if (node->k > m_maximum_search_depth) {
@@ -797,7 +781,6 @@ public:
     /**
      * @brief Construct a new AStar object
      * 
-     * @param initial The initial state.
      * @param successor A function that takes a state and returns all subsequent
      * states.
      * @param is_goal A function that takes a state and returns if that state is
@@ -806,12 +789,12 @@ public:
      * from a given state.
      */
     AStar(
-            State initial,
             Search<Node, State, Compare>::Successors successor,
             Search<Node, State, Compare>::Checker is_goal,
             Heuristic heuristic
-      ) : Search<Node, State, Compare>(initial, successor, is_goal)
+      ) : Search<Node, State, Compare>(successor, is_goal)
         , m_heuristic(heuristic)
+        , m_costs()
     {}
 
 protected:
@@ -836,10 +819,10 @@ protected:
      */
     bool frontier_push(Node *node) override;
 
-    using Search<Node, State, Compare>::m_visited;
+    /// Current cost of states.
+    std::unordered_map<State, double> m_costs;
 
-    /// A function that predicts the remaining cost to the goal from a given
-    /// state.
+    /// Predicts the remaining cost to the goal from a state.
     Heuristic m_heuristic;
 };
 
@@ -853,15 +836,13 @@ AStar<State, Cost, Compare>::make_node(const State &state, Node *parent)
 template<typename State, typename Cost, typename Compare>
 bool AStar<State, Cost, Compare>::frontier_push(Node *node)
 {
-    // If the state has not been visited then push to the queue.
-    auto previous = m_visited.find(node);
-    if (previous == m_visited.end())
-        return Search<Node, State, Compare>::frontier_push(node);
+    auto previous_cost = m_costs.find(node->state);
 
-    // Only push nodes that have better total costs than the same previously
-    // visited state.
-    if ((*previous)->total <= node->total)
-        return false;
-    
-    return Search<Node, State, Compare>::frontier_push(node);
+    // If the state has not been visited, or this node's cost, push.
+    if (previous_cost == m_costs.end() || node->total < *previous_cost) {
+        m_costs[node->state] = node->total;
+        return Search<Node, State, Compare>::frontier_push(node);
+    }
+
+    return false;
 }

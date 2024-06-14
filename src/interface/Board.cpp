@@ -39,11 +39,13 @@ Board::Board(Vector2i size, Vector2d hexagon_size)
 void Board::draw(Runes &runes)
 {
     m_texture.clear();
+
+    sf::Color colour;
     if (runes.connected()) {
-        m_hexagon.setOutlineColor(sf::Color::White);
+        colour = sf::Color::White;
     }
     else {
-        m_hexagon.setOutlineColor(sf::Color::Red);
+        colour = sf::Color::Red;
     }
 
     m_hexagon.setFillColor(sf::Color::Black);
@@ -51,7 +53,7 @@ void Board::draw(Runes &runes)
     m_texture.setView(m_view);
 
     for (const auto &[a, vertex] : runes.board().vertices()) {
-        draw_hexagon(a);
+        draw_hexagon(a, colour);
         auto [x0, y0] = m_grid.to_pixel(a);
 
         for (const auto &[b, edge] : vertex->edges) {

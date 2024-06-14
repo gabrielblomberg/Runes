@@ -156,17 +156,7 @@ public:
          * @returns If the two iterators are equal.
          */
         inline bool operator==(const Iterator &other) const {
-            bool equal = has_vertex();
-            equal &= other.has_vertex();
-            equal &= m_key == other.m_key;
-            equal &= m_vertex.lock() == other.m_vertex.lock();
-            return equal;
-            // return (
-            //     has_vertex() &&
-            //     other.has_vertex() &&
-            //     m_key == other.m_key &&
-            //     m_vertex.lock() == other.m_vertex.lock()
-            // );
+            return m_vertex.lock().get() == other.m_vertex.lock().get();
         }
 
     private:
