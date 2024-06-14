@@ -7,7 +7,7 @@
 
 #include "model/Runes.h"
 #include "util/Hexagon.h"
-#include "util/Eigen.h"
+#include "util/Vector2.h"
 
 /**
  * @brief A collection of runes.
@@ -95,7 +95,7 @@ private:
     inline Vector2i to_pixel(std::size_t index) {
         return (
             m_centre - m_radius +
-            Vector2i((int)index % m_spaces.x(), (int)index / m_spaces.x()) / m_spaces * // Index
+            Vector2i((int)index % m_spaces.x, (int)index / m_spaces.x) / m_spaces * // Index
             3.5 * Vector2i(m_hexagon_diameter, m_hexagon_diameter) + // Positioning.
         );
     }

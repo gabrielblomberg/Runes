@@ -1,6 +1,5 @@
 :: Clear directories.
 (rd /S /Q install && mkdir install) || (mkdir install)
-(rd /S /Q lib && mkdir lib) || (mkdir lib)
 (rd /S /Q build && mkdir build) || (mkdir build)
 (rd /S /Q vcpkg && mkdir vcpkg) || (mkdir vcpkg)
 
@@ -14,4 +13,4 @@ cd ..
 set VCPKG_ROOT=%cd%\vcpkg
 set PATH=%VCPKG_ROOT%;%PATH%
 
-vcpkg install eigen3:x64-windows-static sfml:x64-windows-static
+vcpkg install sfml:x64-windows-static

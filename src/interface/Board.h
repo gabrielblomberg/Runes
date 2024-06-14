@@ -4,7 +4,7 @@
 
 #include "interface/Window.h"
 #include "util/Hexagon.h"
-#include "util/Eigen.h"
+#include "util/Vector2.h"
 #include "model/Runes.h"
 
 class Board
@@ -17,13 +17,13 @@ public:
      * @param size The pixel width and height of the board.
      * @param hexagon_size The size of the hexagons 
      */
-    Board(Vector2d size, Vector2d hexagon_size);
+    Board(Vector2i size, Vector2d hexagon_size);
 
     /**
      * @brief Get the pixel width and height of the board.
      * @return The pixel width and height of the board.
      */
-    inline const Vector2d &size() {
+    inline const Vector2i &size() {
         return m_size;
     }
 
@@ -77,7 +77,7 @@ public:
 private:
 
     /// The size of the board in pixels.
-    Vector2d m_size;
+    Vector2i m_size;
 
     /// Hexagons to highlight.
     std::unordered_map<Hexagon::Hexagon<int>, sf::Color> m_highlights;

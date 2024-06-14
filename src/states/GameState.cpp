@@ -9,7 +9,7 @@
 GameState::GameState(Application *app, std::stop_token stop)
     : ApplicationState(app, stop)
     , m_board(
-        Vector2d(app->window()->getSize().x, app->window()->getSize().y),
+        Vector2i(app->window()->getSize().x, app->window()->getSize().y),
         Vector2d(20, 20)
     )
 {
