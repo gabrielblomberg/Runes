@@ -4,19 +4,13 @@
 #include "interface/Board.h"
 #include "interface/Button.h"
 #include "model/Runes.h"
-#include "util/Vector2.h"
 #include "util/Time.h"
 
 GameState::GameState(Application *app, std::stop_token stop)
     : ApplicationState(app, stop)
     , m_board(
-        Vector2i(app->window()->getSize().x, app->window()->getSize().y),
+        Vector2d(app->window()->getSize().x, app->window()->getSize().y),
         Vector2d(20, 20)
-    )
-    , m_box(
-        Vector2i(10 * 20, 6 * 20),
-        20,
-        Vector2i(app->window()->getSize().x / 2, 4 * app->window()->getSize().y / 5)
     )
 {
     auto size = app->window()->getSize();
@@ -47,10 +41,8 @@ void GameState::handle_click(const Message<CLICK> &click)
         m_runes.perform<Runes::ActionType::PLACE_PLAYER_RUNE>(
             0, Runes::RuneType::VITALITY, hex
         );
-        m_box.add(Runes::RuneType::VITALITY);
     }
     else {
-        m_box.remove(Runes::RuneType::VITALITY);
         m_runes.perform<Runes::ActionType::MOVE_PLAYER_RUNE>(0, hex, hex);
     }
 }
@@ -78,9 +70,7 @@ void GameState::render_thread()
             auto window = m_handle->window().lock();
             window->clear();
 
-            m_box.draw(*window);
             m_board.draw(m_runes);
-
             m_board.display(*window);
             window->display();
         }

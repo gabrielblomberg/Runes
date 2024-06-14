@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# vcpkg\installed\x64-windows-static\share\sfml\SFMLConfig.cmake
 find_package(SFML COMPONENTS system window graphics CONFIG REQUIRED)
 find_package(Eigen3 REQUIRED)
 
@@ -26,28 +27,19 @@ add_executable(
     model/Runes.cpp
     interface/Board.cpp
     interface/Button.cpp
-    interface/RuneBox.cpp
     interface/RuneTile.cpp
     interface/Window.cpp
 )
 
 target_include_directories(runes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(main PRIVATE sfml-system sfml-network sfml-graphics sfml-window)
+target_link_libraries(runes PRIVATE sfml-system sfml-network sfml-graphics sfml-window)
 
 # Additional logic depending on the operating system.
 target_compile_options(
     runes
     PUBLIC
-    /wd5045 # Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
-    /wd4711
-    /wd4710 # 'function': function not inlined
-    /wd5031 # #pragma warning(pop): likely mismatch, popping warning state pushed in different file 
-    /wd4464 # 'bytes' bytes padding added after construct 'member_name'
-    /wd4820 # bytes padded after base class
-    /wd4625 # copy constructor implicitly deleted
-    /wd4626 # assignment operator implicitly deleted
-    /wd4996 # getenv function or variable may be unsafe
+    /W3
 )
 target_link_libraries(runes PUBLIC Ws2_32)
 

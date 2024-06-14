@@ -227,13 +227,13 @@ inline std::array<Hexagon<T>, 6> Hexagon<T>::neighbors() const noexcept {
 template<typename T>
 Hexagon<int> Hexagon<T>::round() const noexcept
 {
-    int round_q = std::round(q);
-    int round_r = std::round(r);
-    int round_s = std::round(s);
+    int round_q = (int)std::round(q);
+    int round_r = (int)std::round(r);
+    int round_s = (int)std::round(s);
 
-    double q_diff = std::abs(q - std::round(q));
-    double r_diff = std::abs(r - std::round(r));
-    double s_diff = std::abs(s - std::round(s));
+    double q_diff = std::abs(q - (int)std::round(q));
+    double r_diff = std::abs(r - (int)std::round(r));
+    double s_diff = std::abs(s - (int)std::round(s));
 
     if (q_diff > r_diff && q_diff > s_diff)
         return Hexagon<int>(-round_r - round_s, round_r, round_s);
@@ -252,7 +252,6 @@ std::ostream &operator<<(std::ostream &out, Hexagon::Hexagon<T> hexagon)
     return out << "Hexagon(" << hexagon.q << ", " << hexagon.r << ")";
 }
 
-template<>
 template<typename T>
 struct std::hash<Hexagon::Hexagon<T>>
 {
@@ -339,28 +338,28 @@ private:
 
 template<>
 struct Grid<GridType::POINTY>::Orientation {
-    static const constexpr double start = 0.5;
-    static const constexpr double f0 = SQRT3;
-    static const constexpr double f1 = SQRT3 / 2.0;
-    static const constexpr double f2 = 0.0;
-    static const constexpr double f3 = 3.0 / 2.0;
-    static const constexpr double b0 = SQRT3 / 3.0;
-    static const constexpr double b1 = -1.0 / 3.0;
-    static const constexpr double b2 = 0.0;
-    static const constexpr double b3 = 2.0 / 3.0;
+    static constexpr const double start = 0.5;
+    static constexpr const double f0 = SQRT3;
+    static constexpr const double f1 = SQRT3 / 2.0;
+    static constexpr const double f2 = 0.0;
+    static constexpr const double f3 = 3.0 / 2.0;
+    static constexpr const double b0 = SQRT3 / 3.0;
+    static constexpr const double b1 = -1.0 / 3.0;
+    static constexpr const double b2 = 0.0;
+    static constexpr const double b3 = 2.0 / 3.0;
 };
 
 template<>
 struct Grid<GridType::FLAT>::Orientation {
     static const constexpr double start = 0.0;
-    static const constexpr double f0 = 3.0 / 2.0;
-    static const constexpr double f1 = 0.0;
-    static const constexpr double f2 = SQRT3 / 2.0;
-    static const constexpr double f3 = SQRT3;
-    static const constexpr double b0 = 2.0 / 3.0;
-    static const constexpr double b1 = 0.0;
-    static const constexpr double b2 = -1.0 / 3.0;
-    static const constexpr double b3 = SQRT3 / 3.0;
+    static constexpr const double f0 = 3.0 / 2.0;
+    static constexpr const double f1 = 0.0;
+    static constexpr const double f2 = SQRT3 / 2.0;
+    static constexpr const double f3 = SQRT3;
+    static constexpr const double b0 = 2.0 / 3.0;
+    static constexpr const double b1 = 0.0;
+    static constexpr const double b2 = -1.0 / 3.0;
+    static constexpr const double b3 = SQRT3 / 3.0;
 };
 
 template<GridType Type>

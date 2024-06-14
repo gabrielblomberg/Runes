@@ -1,6 +1,6 @@
 #include "interface/Board.h"
 
-Board::Board(Vector2i size, Vector2d hexagon_size)
+Board::Board(Vector2d size, Vector2d hexagon_size)
     : m_size(size)
     , m_texture()
     , m_grid()
@@ -12,35 +12,41 @@ Board::Board(Vector2i size, Vector2d hexagon_size)
     texture_settings.antialiasingLevel = 8;
 
     // Create the texture that contains the board.
-    if (!m_texture.create(size.x, size.y, texture_settings))
+    if (!m_texture.create(size.x(), size.y(), texture_settings))
         throw std::runtime_error("Failed to create runes texture.");
 
     // Define the transformation from the texture to the window. The texture has
     // the given size and should be drawn in the middle of the screen.
-    m_view.setSize(m_size.x, m_size.y);
-    m_view.setCenter(m_size.x / 2, m_size.y / 2);
+    m_view.setSize(m_size.x(), m_size.y());
+    m_view.setCenter(m_size.x() / 2, m_size.y() / 2);
 
     // Define the hexagonal grid to have the same size d
     m_grid = Hexagon::Grid<Hexagon::GridType::FLAT>(
-        hexagon_size.x,
-        hexagon_size.y,
-        size.x / 2,
-        size.y / 2
+        hexagon_size.x(),
+        hexagon_size.y(),
+        size.x() / 2,
+        size.y() / 2
     );
 
     // Create a hexagon that will be drawn.
     m_hexagon.setPointCount(6);
     for (int i = 0; i < 6; i++) {
         auto [x, y] = m_grid.corner_offset(i);
-        m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
+        m_hexagon.setPoint(i, sf::Vector2f(x, y) * 0.95);
     }
 }
 
 void Board::draw(Runes &runes)
 {
     m_texture.clear();
+    if (runes.connected()) {
+        m_hexagon.setOutlineColor(sf::Color::White);
+    }
+    else {
+        m_hexagon.setOutlineColor(sf::Color::Red);
+    }
+
     m_hexagon.setFillColor(sf::Color::Black);
-    m_hexagon.setOutlineColor(sf::Color::White);
     m_hexagon.setOutlineThickness(1);
     m_texture.setView(m_view);
 

@@ -14,4 +14,4 @@ cd ..
 set VCPKG_ROOT=%cd%\vcpkg
 set PATH=%VCPKG_ROOT%;%PATH%
 
-vcpkg install sfml:x86-windows-static
+vcpkg install eigen3:x64-windows-static sfml:x64-windows-static

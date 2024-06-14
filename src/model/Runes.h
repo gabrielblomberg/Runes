@@ -164,6 +164,8 @@ public:
         return m_board;
     }
 
+    bool connected();
+
 private:
 
     /**
@@ -177,8 +179,6 @@ private:
      */
     template<ActionType A>
     bool action(ActionData<A> &data);
-
-    bool connected();
 
     bool rune_moveable(Hexagon::Hexagon<int> hex);
 

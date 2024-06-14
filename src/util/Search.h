@@ -41,7 +41,6 @@ struct SearchNode {
 };
 
 // Hash of a search state for storing in a mapping.
-template<>
 template<typename State>
 struct std::hash<SearchNode<State>>
 {
@@ -101,6 +100,11 @@ public:
      * @param visited Optionally, the states that have already been visited.
      */
     Search(Successors successor, Checker is_goal);
+
+    /**
+     * @brief Virtual destructor.
+     */
+    virtual ~Search() {};
 
     /**
      * @brief Perform the search operation.
@@ -458,7 +462,6 @@ struct IDDFSNode {
 };
 
 // Hash of a search state for storing in a mapping.
-template<>
 template<typename State>
 struct std::hash<IDDFSNode<State>>
 {
@@ -677,7 +680,6 @@ struct UCSNode {
 };
 
 // Hash of a search state for storing in a mapping.
-template<>
 template<typename State, typename Cost>
 struct std::hash<UCSNode<State, Cost>>
 {
@@ -766,7 +768,6 @@ struct AStarNode {
 };
 
 // Hash of a search state for storing in a mapping.
-template<>
 template<typename State, typename Cost>
 struct std::hash<AStarNode<State, Cost>>
 {

@@ -5,7 +5,6 @@
 #include "model/Runes.h"
 #include "interface/Window.h"
 #include "interface/Board.h"
-#include "interface/RuneBox.h"
 
 class GameState : public ApplicationState
 {
@@ -55,9 +54,6 @@ private:
 
     /// The of the game.
     Board m_board;
-
-    /// Box of all the players runes.
-    RuneBox m_box;
 
     /// The view of the thread.
     std::jthread m_render_thread;
