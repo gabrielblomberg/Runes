@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <variant>
+#include <cstdint>
 
 namespace TypeList {
 
@@ -14,16 +15,20 @@ struct TypeList;
 // Empty
 
 template<typename List>
-struct IsEmpty {
+struct _IsEmpty {
     static const constexpr bool value = false;
 };
 
 template<>
-struct IsEmpty<TypeList<>> {
+struct _IsEmpty<TypeList<>> {
     static const constexpr bool value = true;
 };
 
-// Size
+/**
+ * @brief Check if a type list is empty.
+ */
+template<typename List>
+using IsEmpty = _IsEmpty<List>::value;
 
 template <typename>
 struct _Size;
@@ -39,8 +44,6 @@ struct _Size<TypeList<Types...>> {
 template <typename List>
 inline constexpr std::size_t Size = _Size<List>::value;
 
-// Front
-
 template <typename List>
 struct _Front;
 
@@ -54,8 +57,6 @@ struct _Front<TypeList<Head, Tail...>> {
  */
 template <typename List>
 using Front = typename _Front<List>::type;
-
-// Push front.
 
 template <typename Type, typename List>
 struct _PushFront;
@@ -71,8 +72,6 @@ struct _PushFront<Type, TypeList<Head, Tail...>> {
 template <typename Type, typename Head, typename... Tail>
 using PushFront = typename _PushFront<Type, TypeList<Head, Tail...>>::type;
 
-// Pop front.
-
 template <typename List>
 struct _PopFront;
 
@@ -87,12 +86,10 @@ struct _PopFront<TypeList<Head, Tail...>> {
 template <typename List>
 using PopFront = typename _PopFront<List>::type;
 
-// Get a type using an index on a type list.
-
-template <typename List, unsigned I>
+template <typename List, std::uint64_t I>
 struct _Get;
 
-template <typename List, unsigned I>
+template <typename List, std::uint64_t I>
 struct _Get : public _Get<PopFront<List>, I - 1> {};
 
 template <typename List>
@@ -101,10 +98,10 @@ struct _Get<List, 0> : public _Front<List> {};
 /**
  * @brief Get a type from a type list from an index.
  */
-template<typename List, unsigned I>
+template<typename List, std::uint64_t I>
 using Get = _Get<List, I>::type;
 
-template <typename List, typename Type, unsigned I>
+template <typename List, typename Type, std::uint64_t I>
 struct _Index {
     static_assert(I < Size<List>);
     static const constexpr std::size_t value = I;
@@ -115,10 +112,33 @@ struct _Index {
     >;
 };
 
+/**
+ * @brief Get the type at an index.
+ */
 template <typename List, typename Type>
 using Index = _Index<List, Type, 0>::value;
 
-// Concatenate two type lists together.
+template<typename List, typename Type, std::uint64_t I>
+struct _Find {
+
+    struct Value {
+        using value = I;
+    };
+
+    static_assert(I < Size<List> && "find failed");
+    using value = std::conditional_t<
+        std::is_same_v<Front<List>, Type>,
+        Value,
+        _Find<PopFront<List>, Type, I + 1>
+    >::value;
+};
+
+/**
+ * @brief Find for the index of a type in a type list.
+ * @returns The first index of that type.
+ */
+template<typename List, typename T>
+using Find = _Find<List, T, 0>::value;
 
 template<typename Left, typename Right>
 struct _Concatenate;
@@ -140,8 +160,6 @@ struct _Concatenate<
 template<typename Left, typename Right>
 using Concatenate = _Concatenate<Left, Right>::type;
 
-// Transform the types in a typelist with a meta function.
-
 template<template<typename T> class MetaFunction, typename Head, typename... Tail>
 struct _Transform
 {
@@ -162,6 +180,27 @@ struct _Transform<MetaFunction, TypeList<Head>>
  */
 template<typename List, template<typename T> class MetaFunction>
 using Transform = _Transform<MetaFunction, List>::type;
+
+template<template<typename T> class Template, typename Head, typename... Tail>
+struct _Apply
+{
+    using type = Concatenate<
+        TypeList<Template<Head>>,
+        typename _Apply<Template, Tail...>::type
+    >;
+};
+
+template<template<typename T> class Template, typename Head>
+struct _Apply<Template, TypeList<Head>>
+{
+    using type = Template<Head>;
+};
+
+/**
+ * @brief Apply a template type to each type in the list, yielding the new list.
+ */
+template<template<typename T> class Template, typename List>
+using Apply = _Apply<Template, List>::type;
 
 // Tuple.
 

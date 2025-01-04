@@ -2,12 +2,16 @@
 
 #include <array>
 #include <bitset>
+#include <cassert>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <queue>
-#include <unordered_map>
-#include <typeindex>
 #include <set>
+#include <typeindex>
+#include <unordered_map>
+
+#include "util/TypeList.h"
 
 /**
  * @note This implementation is based on
@@ -43,21 +47,33 @@ static const constexpr Component MAX_COMPONENTS = 32;
 using Signature = std::bitset<MAX_COMPONENTS>;
 
 /**
- * @brief The entity manager provides information about entity types.
- * 
- * It returns bit sets with flags set for each component an entity has,
- * contained within contiguous memory for minimal cache misses.
+ * @brief The entity manager maintains unique entity identifiers and entity type
+ * information.
  */
 class EntityManager
 {
-    EntityManager();
+    inline EntityManager()
+        : m_existing(0)
+    {
+        for (Entity entity = 0; entity < MAX_ENTITIES; ++entity)
+            m_available.push(entity);
+    }
 
     /**
      * @brief Create a new entity.
      * 
      * @return The allocated entity identifier.
      */
-    Entity create_entity();
+    inline Entity create_entity()
+    {
+        assert(!m_available.empty() && "too many entities");
+
+        Entity entity = m_available.front();
+        m_available.pop();
+        ++m_existing;
+
+        return entity;
+    }
 
     /**
      * @brief Remove an entity from the signatures and make the identifier
@@ -65,15 +81,26 @@ class EntityManager
      * 
      * @param entity The identifier to remove.
      */
-    void destroy_entity(Entity entity);
+    inline void destroy_entity(Entity entity)
+    {
+        assert(entity < MAX_ENTITIES && "entity out of range");
+
+        m_signatures[entity].reset();
+        m_available.push(entity);
+        --m_existing;
+    }
 
     /**
      * @brief Set the component signature of an entity.
      * 
-     * @param entity THe identifier of the entity.
+     * @param entity The identifier of the entity.
      * @param signature The signature of the entity.
      */
-    void set_signature(Entity entity, Signature signature);
+    void set_signature(Entity entity, Signature signature)
+    {
+        assert(entity < MAX_ENTITIES && "entity out of range");
+        m_signatures[entity] = signature;
+    }
 
     /**
      * @brief Get the signature of an entity.
@@ -81,7 +108,19 @@ class EntityManager
      * @param entity The identifier of the entity to get.
      * @returns The component signature of the entity.
      */
-    Signature get_signature(Entity entity);
+    Signature get_signature(Entity entity)
+    {
+        assert(entity < MAX_ENTITIES && "entity out of range");
+        return m_signatures[entity];
+    }
+
+    /**
+     * @brief Get the number of existing entities.
+     */
+    std::uint64_t size()
+    {
+        return m_existing;
+    }
 
 private:
 
@@ -90,24 +129,9 @@ private:
 
     /// The signatures of all registered components.
     std::array<Signature, MAX_ENTITIES> m_signatures;
-};
 
-/**
- * @brief 
- * 
- */
-class IComponentArray
-{
-public:
-
-	virtual ~IComponentArray() = default;
-
-    /**
-     * @brief Callback to check if 
-     * 
-     * @param entity 
-     */
-	virtual void EntityDestroyed(Entity entity) = 0;
+    /// The number of existing entities.
+    std::uint64_t m_existing;
 };
 
 /**
@@ -115,7 +139,7 @@ public:
  * each entity if it has one.
  */
 template<typename ComponentType>
-class ComponentArray : public IComponentArray
+class ComponentArray
 {
 public:
 
@@ -125,7 +149,18 @@ public:
      * @param entity The entity to add the component to.
      * @param component The component to add.
      */
-    void add(Entity entity, ComponentType component);
+    inline void add(Entity entity, ComponentType component)
+    {
+        assert(entity < MAX_ENTITIES && "too many entities");
+
+        std::size_t index = m_size;
+        m_components[index] = component;
+
+        m_entity_to_index[entity] = index;
+        m_index_to_entity[index] = entity;
+
+        ++m_size;
+    }
 
     /**
      * @brief Get the component of an entity.
@@ -133,20 +168,41 @@ public:
      * @param entity The entity to get the component of.
      * @returns The component of the entity.
      */
-    ComponentType &get(Entity entity);
+    ComponentType &get(Entity entity)
+    {
+        return m_components[m_entity_to_index[entity]];
+    }
 
     /**
      * @brief Reset an entities data.
      * 
      * @param entity The entity to reset.
      */
-    void remove(Entity entity);
+    inline void remove(Entity entity)
+    {
+        std::size_t index = m_entity_to_index[entity];
+        std::size_t last_index = m_size - 1;
+        Entity last_entity = m_index_to_entity[last_index];
+
+        // Maintain contiguous by moving last component and entity to removed.
+        m_components[index] = m_components[last_index];
+        m_entity_to_index[last_entity] = index;
+        m_index_to_entity[index] = last_entity;
+
+        // Remove the entity.
+        m_entity_to_index.erase(entity);
+        m_index_to_entity.erase(last_index);
+    }
 
     /**
      * @brief Called when an entity is destroyed to destroy its components.
      * @param entity The entity that was destroyed.
      */
-    void entity_destroyed(Entity entity) override;
+    void entity_destroyed(Entity entity) override
+    {
+        if (m_entity_to_index.find(entity) != m_entity_to_index.end())
+            remove(entity);
+    }
 
 private:
 
@@ -163,80 +219,16 @@ private:
     std::size_t m_size;
 };
 
-template<typename ComponentType>
-void ComponentArray<ComponentType>::add(Entity entity, ComponentType component)
-{
-    std::size_t index = m_size;
-    m_entity_to_index[entity] = index;
-    m_index_to_entity[index] = entity;
-    m_components[index] = component;
-    ++m_size;
-}
-
-template<typename ComponentType>
-ComponentType &ComponentArray<ComponentType>::get(Entity entity)
-{
-    return m_components[m_entity_to_index[entity]];
-}
-
-template<typename ComponentType>
-void ComponentArray<ComponentType>::remove(Entity entity)
-{
-    std::size_t index = m_entity_to_index[entity];
-    std::size_t last_index = m_size - 1;
-    Entity last_entity = m_index_to_entity[last_index];
-
-    // Maintain contiguous by moving last component and entity to removed.
-    m_components[index] = m_components[last_index];
-    m_entity_to_index[last_entity] = index;
-    m_index_to_entity[index] = last_entity;
-
-    // Remove the entity.
-    m_entity_to_index.erase(entity);
-    m_index_to_entity.erase(last_index);
-}
-
-template<typename ComponentType>
-void ComponentArray<ComponentType>::entity_destroyed(Entity entity)
-{
-    if (m_entity_to_index.find(entity) != m_entity_to_index.end()) {
-        remove(entity);
-    }
-}
-
 /**
  * @brief Manages all the different types of components, and entities that own
  * instances of those components.
  */
+template<typename... Components>
 class ComponentManager
 {
 public:
 
-    ComponentManager()
-        : m_next_component(0)
-    {}
-
-    /**
-     * @brief Register a new component that an entity can own.
-     * 
-     * @tparam T The type of the component.
-     * @param name The name of the component.
-     */
-    template<typename ComponentType>
-    void register_component();
-
-    /**
-     * @brief Get the type identifier of a component.
-     * 
-     * @tparam ComponentType The type of component.
-     * @return The type identifier of the component. 
-     */
-    template<typename ComponentType>
-    inline Component type() {
-        std::type_index index = std::type_index(typeid(ComponentType));
-        assert(m_component_types.find(index) != m_component_types.end());
-        return m_component_types[index];
-    }
+    static_assert(sizeof...(Components) < MAX_COMPONENTS);
 
     /**
      * @brief Add a component to an entity.
@@ -247,7 +239,8 @@ public:
      */
     template<typename ComponentType>
     inline void add(Entity entity, ComponentType component) {
-        get_components<ComponentType>()->add(entity, component);
+        constexpr Component Index = TypeList::Find<Components, ComponentType>;
+        std::get<Index>(m_components).add(entity, component);
     }
 
     /**
@@ -258,7 +251,8 @@ public:
      */
     template<typename ComponentType>
     inline void remove(Entity entity) {
-        get_components<ComponentType>()->remove(entity);
+        constexpr Component Index = TypeList::Find<Components, ComponentType>;
+        std::get<Index>(m_components).remove(entity);
     }
 
     /**
@@ -273,57 +267,25 @@ public:
         get_components<ComponentType>()->get(entity);
     }
 
-    /**
-     * @brief Get the number of registered components.
-     * @return The number of registered components. 
-     */
-    inline std::size_t size() {
-        return m_next_component;
-    } 
-
 private:
 
     /**
-     * @brief Get a pointer to the the component array of a component type.
-     * 
-     * @tparam ComponentType The type of component.
-     * @return The array of components for each entity.
+     * @brief Type list of all component arrays.
      */
-    template<typename ComponentType>
-    inline std::shared_ptr<ComponentArray<ComponentType>> get_components() {
-        return std::static_pointer_cast<ComponentArray<ComponentType>>(
-            m_component_arrays[std::type_index(typeid(ComponentType))]
-        );
-    }
+    using ComponentArrays = Typelist::Apply<ComponentArray, Components>;
 
-    /// Types to their allocated component type.
-    std::unordered_map<std::type_index, Component> m_component_types;
-
-    /// The array of component instances of each entity for each component type.
-    std::unordered_map<std::type_index, std::shared_ptr<IComponentArray>> m_component_arrays;
-
-    /// The next component type identifier. Used for setting Signature bit fields.
-    std::size_t m_next_component;
+    TypeList::TupleOf<ComponentArrays> m_components;
 };
-
-template<typename ComponentType>
-void ComponentManager::register_component()
-{
-    std::type_index index = std::type_index(typeid(ComponentType));
-    assert(m_component_names.find(index) != m_component_arrays.end());
-
-    m_component_types.emplace(index, m_next_component);
-    m_component_arrays.emplace(index, std::make_shared<ComponentArray<ComponentType>>());
-    ++m_next_component;
-}
 
 class System
 {
 public:
+
     std::set<Entity> m_entities;
 };
 
 class SystemManager
 {
+public:
 
 };
