@@ -1,7 +1,10 @@
 #pragma once
 
-#include <unordered_set>
+#include <cassert>
+#include <deque>
+#include <array>
 #include <bitset>
+#include <unordered_set>
 
 #include "util/TypeList.h"
 
@@ -9,14 +12,6 @@
  * @brief Identifier of an entity managed by the entity component system.
  */
 using Entity = std::uint64_t;
-
-/**
- * 
- */
-struct System
-{
-    std::unordered_set<Entity> m_entities;
-};
 
 /**
  * @tparam Components Typelist of data structures.
@@ -29,6 +24,9 @@ public:
 
     /**
      * @brief Bitset signifying the components belonging to an entity.
+     * 
+     * The signature has a bit set for every component the entity has, and
+     * cleared for components the entity does not have.
      */
     using Signature = std::bitset<TypeList::Size<Components>>;
 
@@ -41,7 +39,7 @@ public:
         assert(!m_available.empty() && "too many entities");
 
         Entity entity = m_available.front();
-        m_available.pop();
+        m_available.pop_front();
         ++m_size;
 
         return entity;
@@ -57,6 +55,8 @@ public:
     template<std::size_t Component>
     inline void add_component(Entity entity, TypeList::Get<Components, Component> &&component) {
         std::get<Component>(m_components).add(entity, std::forward(component));
+        Signature &signature = m_entity_signatures[entity].set(Component, true);
+        update_system_entities(entity, signature);
     }
 
     /**
@@ -67,7 +67,7 @@ public:
      * @return A reference to the component data.
      */
     template<std::size_t Component>
-    inline TypeList::Get<Components, Component> &get_component(Entity entity) {
+    inline auto &get_component(Entity entity) {
         return std::get<Component>(m_components).get(entity);
     }
 
@@ -80,6 +80,25 @@ public:
     template<std::size_t Component>
     inline void remove_component(Entity entity) {
         std::get<Component>(m_components).remove(entity);
+        Signature signature = m_entity_signatures[entity].set(Component, false);
+        update_system_entities(entity, signature);
+    }
+
+    /**
+     * @brief Get the signature of a component.
+     * 
+     * The signature has a bit set for every component the entity has, and
+     * cleared for components the entity does not have.
+     * 
+     * The entity has a Component if 1 << Component is set.
+     * 
+     * @param entity The entity.
+     * @returns The entities component signature.
+     */
+    Signature get_signature(Entity entity)
+    {
+        assert(entity < N && "get entity signature out of range");
+        return m_entity_signatures[entity];
     }
 
     /**
@@ -98,30 +117,18 @@ public:
             "entity out of range"
         );
 
-        Signature signature = m_signatures[entity];
-        m_signatures[entity].reset();
-        m_available.push(entity);
-        --m_number_of_entities;
+        m_entity_signatures[entity].reset();
+        m_available.push_back(entity);
+        --m_size;
 
-        // Destroy entity from each component array.
+        // Remove entity from each component array.
         std::apply(
-            [&]<typename ComponentType>(ComponentArray<ComponentType> &array){
-                assert(false);
-                array.remove(entity);
-            },
+            []<typename T>(ComponentArray<T> &array){ array.remove(entity); },
             m_components
         );
 
         // Update system entity arrays.
-        std::apply(
-            [&]<typename SystemType>(SystemType &system){
-                if (system.signature & signature)
-                    system.m_entities.insert(entity);
-                else
-                    system.m_entities.erase(entity);
-            },
-            m_systems
-        );
+        update_system_entities(entity, 0);
     }
 
     /**
@@ -136,27 +143,9 @@ public:
      * @brief Get a pointer to a system.
      */
     template<std::size_t System>
-    inline TypeList::Get<Systems, System> &get_system()
+    inline auto &get_system()
     {
         return std::get<System>(m_systems).system;
-    }
-
-    /**
-     * @brief Get the signature of a system.
-     */
-    template<std::size_t System>
-    Signature get_system_signature()
-    {
-        return std::get<System>(m_systems).signature;
-    }
-
-    /**
-     * @brief Set the signature of a system.
-     */
-    template<std::size_t System>
-    void set_system_signature(Signature signature)
-    {
-        std::get<System>(m_systems).signature = signature;
     }
 
 private:
@@ -235,26 +224,35 @@ private:
     };
 
     /**
-     * @brief Add a signature to a system type.
+     * @brief Updates all the systems with an entity.
+     * 
+     * @param entity The entity that changed.
+     * @param signature The entities component signature.
      */
-    template<typename SystemType>
-    struct AddSignature {
-        SystemType system;
-        Signature signature;
-    };
+    void update_system_entities(Entity entity, Signature signature)
+    {
+        const static auto update = [&]<typename T>(T &system){
+            if (T::SIGNATURE & signature)
+                system.m_entities.insert(entity);
+            else
+                system.m_entities.erase(entity);
+        };
+
+        std::apply(update, m_systems);
+    }
 
     /// The number of existing entities.
     std::uint64_t m_size;
 
     /// The queue of available entity identifiers.
-    std::queue<Entity> m_available;
+    std::deque<Entity> m_available;
 
     /// The signatures of all registered components.
     std::array<Signature, N> m_entity_signatures;
 
     /// All the systems.
-    TypeList::TupleOf<TypeList::Apply<AddSignature, Systems>> m_systems;
+    TypeList::TupleOf<Systems> m_systems;
 
     /// All the component data arrays.
-    Typelist::TupleOf<Typelist::Apply<ComponentArray, Components>> m_components;
+    TypeList::TupleOf<TypeList::Apply<ComponentArray, Components>> m_components;
 };

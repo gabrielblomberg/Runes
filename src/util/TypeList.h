@@ -120,12 +120,12 @@ using Index = _Index<List, Type, 0>::value;
 
 template<typename List, typename Type, std::uint64_t I>
 struct _Find {
+    static_assert(I < Size<List> && "find failed");
 
     struct Value {
-        using value = I;
+        static const constexpr std::size_t value = I;
     };
 
-    static_assert(I < Size<List> && "find failed");
     using value = std::conditional_t<
         std::is_same_v<Front<List>, Type>,
         Value,

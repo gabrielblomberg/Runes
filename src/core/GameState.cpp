@@ -1,13 +1,13 @@
-#include "states/GameState.h"
+#include "core/GameState.h"
 
-#include "interface/Window.h"
 #include "interface/Board.h"
 #include "interface/Button.h"
+#include "interface/Window.h"
 #include "model/Runes.h"
 #include "util/Time.h"
 
-GameState::GameState(Application *app, std::stop_token stop)
-    : ApplicationState(app, stop)
+GameState::GameState(Application *app)
+    : Application::State(app)
     , m_board(
         Vector2i(app->window()->getSize().x, app->window()->getSize().y),
         Vector2d(20, 20)
@@ -20,15 +20,20 @@ GameState::GameState(Application *app, std::stop_token stop)
     window->clear(sf::Color::Black);
     window->display();
 
-    m_handle->messenger().subscribe<CLICK>(
+    m_application->messenger().subscribe<CLICK>(
         [this](const Message<CLICK> &m) { handle_click(m); }
     );
 
-    m_handle->messenger().subscribe<MOUSE>(
+    m_application->messenger().subscribe<MOUSE>(
         [this](const Message<MOUSE> &m) { handle_mouse(m); }
     );
+}
 
-    m_render_thread = std::jthread(&GameState::render_thread, this);
+std::vector<std::unique_ptr<Application::State>> GameState::run(StopCondition &&stop)
+{
+    m_render_thread = std::jthread(&GameState::render_thread, this, stop);
+    stop.wait();
+    return {};
 }
 
 void GameState::handle_click(const Message<CLICK> &click)
@@ -58,16 +63,16 @@ void GameState::handle_mouse(const Message<MOUSE> &mouse)
     last = current;
 }
 
-void GameState::render_thread()
+void GameState::render_thread(StopCondition &&stop)
 {
     // ~144Hz
     static Time::Duration delta = 7ms;
 
-    while (!m_stop) {
+    while (!stop) {
 
         {
             std::scoped_lock<std::mutex> lock(m_mutex);
-            auto window = m_handle->window().lock();
+            auto window = m_application->window().lock();
             window->clear();
 
             m_board.draw(m_runes);
@@ -75,12 +80,6 @@ void GameState::render_thread()
             window->display();
         }
 
-        m_stop.wait_until(Time::now() + delta);
+        stop.wait_until(Time::now() + delta);
     }
-}
-
-std::unique_ptr<ApplicationState> GameState::main()
-{
-    m_stop.wait();
-    return nullptr;
 }

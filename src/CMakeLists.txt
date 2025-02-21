@@ -19,9 +19,9 @@ include_directories(${SFML_INCLUDE_DIRS})
 add_executable(
     runes
     main.cpp
-    Application.cpp
+    core/Application.cpp
+    core/GameState.cpp
     util/StopCondition.cpp
-    states/GameState.cpp
     model/Runes.cpp
     interface/Board.cpp
     interface/Button.cpp

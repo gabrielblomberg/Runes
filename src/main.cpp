@@ -1,7 +1,4 @@
-#include <iostream>
-
-#include "Application.h"
-#include "util/Search.h"
+#include "core/Application.h"
 
 int main(int argc, char **argv)
 {
