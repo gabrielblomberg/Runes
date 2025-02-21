@@ -1,10 +1,21 @@
 #pragma once
 
-#include "Application.h"
+#include <functional>
 
-#include "model/Runes.h"
-#include "interface/Window.h"
+#include "Application.h"
 #include "interface/Board.h"
+#include "interface/Window.h"
+#include "model/Runes.h"
+#include "util/EntityComponentSystem.h"
+#include "core/Components.h"
+
+using Components = TypeList::TypeList<
+    Component<ComponentType::Position>
+>;
+
+using Systems = TypeList::TypeList<
+
+>;
 
 class GameState : public Application::State
 {
@@ -57,4 +68,7 @@ private:
 
     /// The view of the thread.
     std::jthread m_render_thread;
+
+    /// Entity component system.
+    EntityComponentSystem<ComponentType, SystemType, 1024> m_ecs;
 };

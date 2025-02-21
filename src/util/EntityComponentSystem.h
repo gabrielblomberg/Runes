@@ -13,11 +13,15 @@
  */
 using Entity = std::uint64_t;
 
+struct System {
+    std::unordered_set<Entity> m_entities;
+};
+
 /**
  * @tparam Components Typelist of data structures.
  * @tparam Systems Typelist of all the systems.
  */
-template<typename Components, typename Systems, std::size_t N>
+template<typename Components, std::size_t N>
 class EntityComponentSystem
 {
 public:
@@ -29,6 +33,8 @@ public:
      * cleared for components the entity does not have.
      */
     using Signature = std::bitset<TypeList::Size<Components>>;
+
+    void add_system(std::unique_ptr<System> &&)
 
     /**
      * @brief Create a new entity.
@@ -250,8 +256,11 @@ private:
     /// The signatures of all registered components.
     std::array<Signature, N> m_entity_signatures;
 
+    /// The signatures of all systems.
+    std::vector<Signature> m_system_signatures;
+
     /// All the systems.
-    TypeList::TupleOf<Systems> m_systems;
+    std::vector<std::unique_ptr<System>> m_systems;
 
     /// All the component data arrays.
     TypeList::TupleOf<TypeList::Apply<ComponentArray, Components>> m_components;
