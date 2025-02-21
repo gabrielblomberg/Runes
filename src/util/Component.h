@@ -7,37 +7,30 @@
 #include <memory>
 #include <numeric>
 #include <queue>
-#include <set>
+#include <type_traits>
 #include <typeindex>
 #include <unordered_map>
+#include <unordered_set>
 
-#include "util/TypeList.h"
+#include "engine/TypeList.h"
 
-/**
+/** 
  * @note This implementation is based on
- * 
  * https://austinmorlan.com/posts/entity_component_system/#the-component
+ * 
+ * Changes include compile time type lists for component and system arrays, and
+ * an entity wrapper for more intuitive usage.
  */
 
 /**
- * @brief An entity is defined by its identifier.
+ * @brief A numeric identifier for representing entities.
  */
 using Entity = std::uint64_t;
 
 /**
- * @brief The maximum number of entities.
- */
-static const constexpr Entity MAX_ENTITIES = 4096;
-
-/**
- * @brief Each component has its own identifier.
- */
-using Component = std::uint64_t;
-
-/**
  * @brief The maximum number of components.
  */
-static const constexpr Component MAX_COMPONENTS = 32;
+static const constexpr std::size_t MAX_COMPONENTS = 64;
 
 /**
  * @brief The signature of an entity that determines if a component is
@@ -47,13 +40,18 @@ static const constexpr Component MAX_COMPONENTS = 32;
 using Signature = std::bitset<MAX_COMPONENTS>;
 
 /**
+ * @brief The maximum number of entities.
+ */
+static const constexpr Entity MAX_ENTITIES = 4096;
+
+/**
  * @brief The entity manager maintains unique entity identifiers and entity type
  * information.
  */
 class EntityManager
 {
     inline EntityManager()
-        : m_existing(0)
+        : m_entities(0)
     {
         for (Entity entity = 0; entity < MAX_ENTITIES; ++entity)
             m_available.push(entity);
@@ -70,7 +68,7 @@ class EntityManager
 
         Entity entity = m_available.front();
         m_available.pop();
-        ++m_existing;
+        ++m_entities;
 
         return entity;
     }
@@ -81,13 +79,13 @@ class EntityManager
      * 
      * @param entity The identifier to remove.
      */
-    inline void destroy_entity(Entity entity)
+    inline void entity_destroyed(Entity entity)
     {
         assert(entity < MAX_ENTITIES && "entity out of range");
 
         m_signatures[entity].reset();
         m_available.push(entity);
-        --m_existing;
+        --m_entities;
     }
 
     /**
@@ -119,7 +117,7 @@ class EntityManager
      */
     std::uint64_t size()
     {
-        return m_existing;
+        return m_entities;
     }
 
 private:
@@ -131,7 +129,7 @@ private:
     std::array<Signature, MAX_ENTITIES> m_signatures;
 
     /// The number of existing entities.
-    std::uint64_t m_existing;
+    std::uint64_t m_entities;
 };
 
 /**
@@ -222,13 +220,13 @@ private:
 /**
  * @brief Manages all the different types of components, and entities that own
  * instances of those components.
+ * 
+ * @tparam Components A type list of the component types being managed.
  */
-template<typename... Components>
+template<typename Components>
 class ComponentManager
 {
 public:
-
-    static_assert(sizeof...(Components) < MAX_COMPONENTS);
 
     /**
      * @brief Add a component to an entity.
@@ -237,22 +235,9 @@ public:
      * @param entity The entity to add the component to.
      * @param component The instance of the component.
      */
-    template<typename ComponentType>
-    inline void add(Entity entity, ComponentType component) {
-        constexpr Component Index = TypeList::Find<Components, ComponentType>;
-        std::get<Index>(m_components).add(entity, component);
-    }
-
-    /**
-     * @brief Remove a component from an entity.
-     * 
-     * @tparam ComponentType The type of component to remove from the entity.
-     * @param entity The entity to remove the component from.
-     */
-    template<typename ComponentType>
-    inline void remove(Entity entity) {
-        constexpr Component Index = TypeList::Find<Components, ComponentType>;
-        std::get<Index>(m_components).remove(entity);
+    template<std::size_t Component>
+    inline void add_component(Entity entity, TypeList::Get<Components, Component> component) {
+        std::get<Component>(m_components).add(entity, component);
     }
 
     /**
@@ -262,30 +247,251 @@ public:
      * @param entity The entity to get the component from.
      * @return A reference to the component data.
      */
-    template<typename ComponentType>
-    inline ComponentType &get(Entity entity) {
-        get_components<ComponentType>()->get(entity);
+    template<std::size_t Component>
+    inline TypeList::Get<Components, Component> &get_component(Entity entity) {
+        return std::get<Component>(m_components).get(entity);
     }
+
+    /**
+     * @brief Get the signature of a component.
+     */
+    template<std::size_t Component>
+    inline Signature get_component_signature()
+    {
+        return 1 << Component;
+    }
+
+    /**
+     * @brief Remove a component from an entity.
+     * 
+     * @tparam ComponentType The type of component to remove from the entity.
+     * @param entity The entity to remove the component from.
+     */
+    template<std::size_t Component>
+    inline void remove_component(Entity entity) {
+        std::get<Component>(m_components).remove(entity);
+    }
+
+    /**
+     * @brief Callback for when an entity is destroyed.
+     * @param entity The entity to remove the component from.
+     */
+    // inline void entity_destroyed(Entity entity) {
+    //     (get_component<Components>().entity_destroyed(entity), ...);
+    // }
 
 private:
 
-    /**
-     * @brief Type list of all component arrays.
-     */
-    using ComponentArrays = Typelist::Apply<ComponentArray, Components>;
-
-    TypeList::TupleOf<ComponentArrays> m_components;
+    /// A tuple of the component arrays.
+    Typelist::TupleOf<Typelist::Apply<ComponentArray, Components>> m_components;
 };
 
-class System
-{
-public:
+/**
+ * @brief A generic system which is derived from to implement each system
+ * functionality.
+ */
+struct System {
 
-    std::set<Entity> m_entities;
+    /// The entities belonging to this system.
+    std::unordered_set<Entity> m_entities;
 };
 
+/**
+ * @brief Managers system signatures and storage.
+ * @tparam Systems A typelist of the systems being managed.
+ */
+template<typename Systems>
 class SystemManager
 {
 public:
 
+    /**
+     * @brief Get a pointer to a system.
+     */
+    template<std::size_t System>
+    inline TypeList::Get<Systems, System> &get_system()
+    {
+        return std::get<Systems, System>(m_systems);
+    }
+
+    /**
+     * @brief Set the signature of a system.
+     */
+    template<std::size_t System>
+    void set_signature(Signature signature)
+    {
+        m_signatures[System] = signature;
+    }
+
+    /**
+     * @brief Get the signature of a system.
+     */
+    template<std::size_t System>
+    Signature get_signature()
+    {
+        return m_signatures[System];
+    }
+
+    /**
+     * @brief Update each systems set of entities when the signature of an
+     * entity changes.
+     * 
+     * @param entity The entity whose signature changed.
+     * @param signature The new signature of the entity.
+     */
+    void entity_signature_changed(Entity entity, Signature signature)
+    {
+        static auto update = [entity, signature]<typename T>(T &system){
+            if (m_signatures[i] & signature)
+                system.m_entities.insert(entity);
+            else
+                system.m_entities.erase(entity);
+        };
+
+        // std::apply(update, m_systems);
+    }
+
+private:
+
+    /// The signature for each system.
+    std::array<Signature, TypeList::Size<Systems>> m_signatures;
+
+    TypeList::TupleOf<Systems> m_systems;
+};
+
+/**
+ * @brief The main.
+ */
+template<typename Components, typename Systems>
+class EntityComponentSystem
+{
+public:
+
+    /**
+     * @brief Wrapper around an entity identifier, interfacing with the entity
+     * component system.
+     */
+    class Entity
+    {
+    public:
+
+        /**
+         * @brief Add a component to an entity.
+         * 
+         * @tparam ComponentType The type of the component.
+         * @param entity The entity to add the component to.
+         * @param component The component data.
+         */
+        template<std::size_t Component>
+        void add_component(TypeList::Get<Components, Component> component)
+        {
+            // Add the component.
+            m_ecs->m_component_manager.add_component(m_entity, component);
+
+            // Update the signature of the component.
+            auto signature = m_ecs->m_entity_manager.get_signature(m_entity);
+            constexpr Component Index = TypeList::Find<Components, ComponentType>;
+            signature.set(Index);
+
+            // Update the entities belonging to the system with added component.
+            /// @TODO: Use component type to update system appropriately.
+            m_ecs->m_system_manager.entity_signature_changed(m_entity, signature);
+        }
+
+        /**
+         * @brief Get a component of an entity.
+         * 
+         * Returns a reference to component data of an entity.
+         * 
+         * @tparam ComponentType The component data type.
+         * @param entity The entity to get the component data from.
+         * 
+         * @returns The entities component data.
+         */
+        template<typename ComponentType>
+        inline ComponentType &get_component(Entity entity)
+        {
+            return m_ecs->m_component_manager.get_component<ComponentType>(entity);
+        }
+
+        /**
+         * @brief Remove a component from an entity. Dynamically removes an
+         * attribute from an entity.
+         * 
+         * @tparam ComponentType The type of the component.
+         * @param entity The entity to remove the component data from.
+         */
+        template<typename ComponentType>
+        void remove_component(Entity entity)
+        {
+            m_ecs->m_component_manager.remove_component<ComponentType>(entity);
+        }
+
+        /**
+         * @brief Get the signature of this entity.
+         */
+        Signature get_signature()
+        {
+            return m_ecs->m_entity_manager.get_signature(m_entity);
+        }
+
+    private:
+
+        friend class EntityComponentSystem<Components, Systems>;
+
+        Entity(::Entity entity, EntityComponentSystem<Components, Systems> *ecs)
+            : m_entity(entity)
+            , m_ecs(ecs)
+        {}
+
+        ~Entity()
+        {
+            m_ecs->m_entity_manager.destroy_entity(entity);
+            m_ecs->m_component_manager.entity_destroyed(entity);
+            m_ecs->m_system_manager.entity_signature_changed(entity);
+        }
+
+        /// Entity identifier of this entity.
+        ::Entity m_entity;
+
+        /// Pointer to the entity component system.
+        EntityComponentSystem<Components, Systems> *m_ecs;
+    };
+
+    /**
+     * @brief Create a new entity and returns its identifier.
+     */
+    inline Entity create_entity()
+    {
+        return Entity(m_entity_manager.create_entity(), this);
+    }
+
+    /**
+     * @brief Get the signature of a component.
+     */
+    template<typename ComponentType>
+    Component get_component_signature()
+    {
+        return m_ecs->m_component_manager.get_component_signature();
+    }
+
+    /**
+     * @brief Set the signature of a system.
+     */
+    template<typename SystemType>
+    void set_system_signature(Signature signature)
+    {
+        m_system_manager.set_signature<SystemType>(signature);
+    }
+
+private:
+
+    /// The entity manager keeps track of entity identifiers.
+    EntityManager m_entity_manager;
+
+    /// The component manager handles entity attribute data.
+    ComponentManager<Components> m_component_manager;
+
+    /// The system manager updates the entities belonging to a system.
+    SystemManager<Systems> m_system_manager;
 };

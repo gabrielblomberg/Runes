@@ -10,6 +10,11 @@
 
 #include "util/TypeList.h"
 
+// struct Topic
+// {
+//     using Message = type;
+// };
+
 /**
  * @brief A class responsible for being an intermediary between code publishing
  * messages and code subscribed to them.
