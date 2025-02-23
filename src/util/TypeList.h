@@ -193,7 +193,7 @@ struct _Apply
 template<template<typename T> class Template, typename Head>
 struct _Apply<Template, TypeList<Head>>
 {
-    using type = Template<Head>;
+    using type = TypeList<Template<Head>>;
 };
 
 /**
@@ -205,10 +205,10 @@ using Apply = _Apply<Template, List>::type;
 // Tuple.
 
 template<typename Head, typename... Tail>
-struct _Tuple;
+struct _TupleOf;
 
 template<typename Head, typename... Tail>
-struct _Tuple<TypeList<Head, Tail...>> {
+struct _TupleOf<TypeList<Head, Tail...>> {
     using type = std::tuple<Head, Tail...>;
 };
 
@@ -216,7 +216,7 @@ struct _Tuple<TypeList<Head, Tail...>> {
  * @brief Convert a type list to a tuple of those types.
  */
 template<typename List>
-using TupleOf = _Tuple<List>::type;
+using TupleOf = _TupleOf<List>::type;
 
 // Tuple.
 

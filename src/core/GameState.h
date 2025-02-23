@@ -70,5 +70,5 @@ private:
     std::jthread m_render_thread;
 
     /// Entity component system.
-    EntityComponentSystem<ComponentType, SystemType, 1024> m_ecs;
+    EntityComponentSystem<Components, 1024> m_ecs;
 };

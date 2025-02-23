@@ -25,7 +25,6 @@ add_executable(
     model/Runes.cpp
     interface/Board.cpp
     interface/Button.cpp
-    interface/RuneTile.cpp
     interface/Window.cpp
 )
 

@@ -13,10 +13,6 @@
  */
 using Entity = std::uint64_t;
 
-struct System {
-    std::unordered_set<Entity> m_entities;
-};
-
 /**
  * @tparam Components Typelist of data structures.
  * @tparam Systems Typelist of all the systems.
@@ -26,6 +22,10 @@ class EntityComponentSystem
 {
 public:
 
+    using SystemCallback = std::function<
+        void(EntityComponentSystem<Components, N>*, const std::unordered_set<Entity>&)
+    >;
+
     /**
      * @brief Bitset signifying the components belonging to an entity.
      * 
@@ -34,60 +34,58 @@ public:
      */
     using Signature = std::bitset<TypeList::Size<Components>>;
 
-    void add_system(std::unique_ptr<System> &&)
+    /**
+     * @brief A set of entities with an associated signature.
+     */
+    struct EntitySet {
+
+        /// The signature of the entities.
+        Signature signature;
+
+        /// The entities belonging to this set.
+        std::unordered_set<Entity> entities;
+    };
 
     /**
-     * @brief Create a new entity.
+     * @brief Create a new empty entity.
      * @returns The new entity.
      */
     inline Entity create_entity()
     {
-        assert(!m_available.empty() && "too many entities");
+        assert(!m_available_entities.empty() && "too many entities");
 
-        Entity entity = m_available.front();
-        m_available.pop_front();
-        ++m_size;
+        Entity entity = m_available_entities.front();
+        m_available_entities.pop_front();
 
+        m_entity_signatures[entity].reset();
         return entity;
     }
 
     /**
-     * @brief Add a component to an entity.
+     * @brief Create an entity with its components.
      * 
-     * @tparam ComponentType The type of component.
-     * @param entity The entity to add the component to.
-     * @param component The instance of the component.
+     * @param args The components of the entity.
+     * @returns The entity identifier.
      */
-    template<std::size_t Component>
-    inline void add_component(Entity entity, TypeList::Get<Components, Component> &&component) {
-        std::get<Component>(m_components).add(entity, std::forward(component));
-        Signature &signature = m_entity_signatures[entity].set(Component, true);
-        update_system_entities(entity, signature);
-    }
+    template<typename... Args>
+    inline Entity create_entity(Args... args)
+    {
+        Entity entity = create_entity();
 
-    /**
-     * @brief Get the component data for an entity.
-     * 
-     * @tparam ComponentType The type of component.
-     * @param entity The entity to get the component from.
-     * @return A reference to the component data.
-     */
-    template<std::size_t Component>
-    inline auto &get_component(Entity entity) {
-        return std::get<Component>(m_components).get(entity);
-    }
+        // Add each component.
+        (std::get<TypeList::Index<Components, std::remove_cvref<Args>>>(m_components)
+            .add(entity, std::forward(args)), ...);
 
-    /**
-     * @brief Remove a component from an entity.
-     * 
-     * @tparam ComponentType The type of component to remove from the entity.
-     * @param entity The entity to remove the component from.
-     */
-    template<std::size_t Component>
-    inline void remove_component(Entity entity) {
-        std::get<Component>(m_components).remove(entity);
-        Signature signature = m_entity_signatures[entity].set(Component, false);
-        update_system_entities(entity, signature);
+        // Set the signature from the component indexes.
+        Signature signature = ((1 << TypeList::Index<Components, std::remove_cvref<Args>>) | ...);
+        m_entity_signatures[entity] = signature;
+
+        // Update system entity sets.
+        for (auto &set : m_system_entities)
+            if (signature & set.signature)
+                set.entities.insert(entity);
+
+        return entity;
     }
 
     /**
@@ -101,7 +99,7 @@ public:
      * @param entity The entity.
      * @returns The entities component signature.
      */
-    Signature get_signature(Entity entity)
+    Signature get_entity_signature(Entity entity)
     {
         assert(entity < N && "get entity signature out of range");
         return m_entity_signatures[entity];
@@ -115,26 +113,37 @@ public:
      * 
      * @param entity The entity to remove.
      */
-    void destroy_entity(Entity entity)
+    void remove_entity(Entity entity)
     {
-        // Ensure the identifier exists.
-        assert(
-            std::find(m_available.begin(), m_available.end(), entity) == std::end(m_available) &&
-            "entity out of range"
+        auto it = std::lower_bound(
+            m_available_entities.begin(),
+            m_available_entities.end(),
+            entity
         );
 
-        m_entity_signatures[entity].reset();
-        m_available.push_back(entity);
-        --m_size;
+        assert(it == m_available_entities.end() && entity < N && "entity out of range");
 
-        // Remove entity from each component array.
+        // Remove components from entity.
         std::apply(
             []<typename T>(ComponentArray<T> &array){ array.remove(entity); },
             m_components
         );
 
-        // Update system entity arrays.
-        update_system_entities(entity, 0);
+        // Remove entity from systems.
+        Signature signature = m_entity_signatures[entity];
+        for (auto &set : m_system_entities)
+            if (set.signature & signature)
+                set.entities.erase(entity);
+
+        // Make the entity identifier available again, while maintaining entity
+        // identifier order (makes creating systems easier).
+        auto it = std::lower_bound(
+            m_available_entities.begin(),
+            m_available_entities.end(),
+            entity
+        );
+
+        m_available_entities.insert(it, entity);
     }
 
     /**
@@ -142,16 +151,89 @@ public:
      */
     std::size_t total_entities()
     {
-        return m_size;
+        return N - m_available_entities.size();
     }
 
     /**
-     * @brief Get a pointer to a system.
+     * @brief Add a component to an entity.
+     * 
+     * @tparam ComponentType The type of component.
+     * @param entity The entity to add the component to.
+     * @param component The instance of the component.
      */
-    template<std::size_t System>
-    inline auto &get_system()
+    template<std::size_t Component>
+    inline void add_component(Entity entity, TypeList::Get<Components, Component> &&component)
     {
-        return std::get<System>(m_systems).system;
+        std::get<Component>(m_components).add(entity, std::forward(component));
+        Signature &signature = m_entity_signatures[entity].set(Component, true);
+
+        for (auto &set : m_system_entities)
+            if (signature & set.signature)
+                set.entities.insert(entity);
+    }
+
+    /**
+     * @brief Get the component data for an entity.
+     * 
+     * @tparam ComponentType The type of component.
+     * @param entity The entity to get the component from.
+     * @return A reference to the component data.
+     */
+    template<std::size_t Component>
+    inline auto &get_component(Entity entity)
+    {
+        return std::get<Component>(m_components).get(entity);
+    }
+
+    /**
+     * @brief Remove a component from an entity.
+     * 
+     * @tparam ComponentType The type of component to remove from the entity.
+     * @param entity The entity to remove the component from.
+     */
+    template<std::size_t Component>
+    inline void remove_component(Entity entity)
+    {
+        std::get<Component>(m_components).remove(entity);
+        Signature signature = m_entity_signatures[entity].set(Component, false);
+
+        for (auto &set : m_system_entities)
+            if (!(signature & set.signature))
+                set.entities.erase(entity);
+    }
+
+    /**
+     * @brief Add a system.
+     * 
+     * Adds a managed set of entities which are 
+     * 
+     * @param signature The signature of the system.
+     * @returns The identifier of the system.
+     */
+    void create_system(
+        Signature signature,
+        std::size_t order,
+        SystemCallback callback
+    ) {
+        // Find the system with matching signature if exists.
+        auto entity_set = std::find_if(
+            m_system_entities.begin(),
+            m_system_entities.end(),
+            [](System &system){ system.signature == signature; }
+        );
+
+        if (entity_set == m_system_entities.end())
+            entity_set = create_entity_set(signature);
+
+        // Find the insertion position to maintain system order.
+        auto it = std::lower_bound(
+            m_systems.begin(),
+            m_systems.end(),
+            order,
+            [](const System &s, std::size_t order){ s.order < order; }
+        );
+
+        m_systems.insert(it, {order, callback, &*entity_set});
     }
 
 private:
@@ -192,6 +274,7 @@ private:
          */
         ComponentType &get(Entity entity)
         {
+            assert(entity < N && "entity out of range");
             return m_components[m_entity_to_index[entity]];
         }
 
@@ -214,6 +297,14 @@ private:
             m_size--;
         }
 
+        /**
+         * @brief Get the signature of the component array.
+         */
+        inline constexpr Signature signature()
+        {
+            return 1 << ComponentType;
+        }
+
     private:
 
         /// An instance of the component for every entity. Sparse.
@@ -229,38 +320,55 @@ private:
         std::size_t m_size;
     };
 
-    /**
-     * @brief Updates all the systems with an entity.
-     * 
-     * @param entity The entity that changed.
-     * @param signature The entities component signature.
-     */
-    void update_system_entities(Entity entity, Signature signature)
-    {
-        const static auto update = [&]<typename T>(T &system){
-            if (T::SIGNATURE & signature)
-                system.m_entities.insert(entity);
-            else
-                system.m_entities.erase(entity);
-        };
+    struct System {
 
-        std::apply(update, m_systems);
+        /// The position of the system on update. Lower ordered systems are
+        /// called first. Same order systems have indeterminate ordering.
+        std::size_t order;
+
+        /// Action to perform when the system is called.
+        SystemCallback callback;
+
+        /// Pointer to the entities belonging to this system.
+        EntitySet *entities;
+    };
+
+    /**
+     * @brief Create a new entity set.
+     * 
+     * @param signature The signature of the entity set.
+     */
+    auto create_entity_set(Signature signature)
+    {
+        auto [it, _] = m_system_entities.emplace_back(signature, {});
+        auto available = m_available_entities.begin();
+
+        for (Entity entity = 0; entity < N; ++entity) {
+
+            // Skip non-existing entities.
+            if (*available == entity) {
+                ++available;
+                continue;
+            }
+
+            if (m_entity_signatures[entity] & signature)
+                it->entities.insert(entity);
+        }
+
+        return it;
     }
 
-    /// The number of existing entities.
-    std::uint64_t m_size;
-
     /// The queue of available entity identifiers.
-    std::deque<Entity> m_available;
+    std::deque<Entity> m_available_entities;
 
     /// The signatures of all registered components.
     std::array<Signature, N> m_entity_signatures;
 
-    /// The signatures of all systems.
-    std::vector<Signature> m_system_signatures;
+    /// 
+    std::vector<EntitySet> m_system_entities;
 
     /// All the systems.
-    std::vector<std::unique_ptr<System>> m_systems;
+    std::vector<System> m_systems;
 
     /// All the component data arrays.
     TypeList::TupleOf<TypeList::Apply<ComponentArray, Components>> m_components;
