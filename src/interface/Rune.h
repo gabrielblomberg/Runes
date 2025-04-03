@@ -1,29 +1,10 @@
 #pragma once
 
-#include "core/Application.h"
-#include "model/Runes.h"
-#include "util/Hexagon.h"
-#include "util/Vector2.h"
+#include "core/Game.h"
+#include "core/RenderSystem.h"
 
-namespace interface {
+Entity rune_create(ECS &ecs, Type type);
 
-class Rune
-{
-public:
+void rune_click();
 
-    using Type = Runes::RuneType;
-
-    static Rune Create(Type type);
-
-    void handle_click();
-
-    void draw();
-
-private:
-
-    Entity m_entity;
-
-    Rune();
-};
-
-} // namespace interface
+void rune_render(RenderSystem &renderer);

@@ -1,23 +1,33 @@
 #include "interface/Rune.h"
 
-namespace interface {
+#include "util/Hexagon.h"
+#include "model/Runes.h"
 
-Rune Rune::Create(Type type)
+Entity rune_create(ECS &ecs, Type type)
 {
-    
+    Entity entity = ecs.create_entity();
+    ecs.add_component<ComponentType::Position>(entity, {0.0, 0.0});
+    ecs.add_component<ComponentType::Renderable>(entity, [this])
+    return entity;
 }
 
-// Rune::draw()
-// {
-//     // Create a hexagon that will be drawn.
-//     const static sf::ConvexShape hex = []{
-//         sf::ConvexShape shape;
-//         shape.setPointCount(6);
-//         for (int i = 0; i < 6; i++) {
-//             auto [x, y] = m_grid.corner_offset(i);
-//             m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
-//         }
-//     }();
-// }
+void rune_click()
+{
 
-} // namespace interface
+}
+
+void rune_render(RenderSystem &renderer)
+{
+    // Create a hexagon that will be drawn.
+    const static sf::ConvexShape shape = []{
+        sf::ConvexShape shape;
+        shape.setPointCount(6);
+        for (int i = 0; i < 6; i++) {
+            auto [x, y] = m_grid.corner_offset(i);
+            m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
+        }
+        return shape;
+    }();
+    
+    renderer.
+}

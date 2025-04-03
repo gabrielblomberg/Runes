@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <cassert>
 #include <deque>
 #include <array>
@@ -15,7 +16,6 @@ using Entity = std::uint64_t;
 
 /**
  * @tparam Components Typelist of data structures.
- * @tparam Systems Typelist of all the systems.
  */
 template<typename Components, std::size_t N>
 class EntityComponentSystem
@@ -152,6 +152,18 @@ public:
     std::size_t total_entities()
     {
         return N - m_available_entities.size();
+    }
+
+    /**
+     * @brief Add a component to an entity.
+     * 
+     * @tparam Component The type of component.
+     * @param args The parts of the component.
+     */
+    template<std::size_t Component, typename... Args>
+    inline void add_component(Entity entity, Args... args)
+    {
+        add_component(entity, TypeList::Get<Components, Component>{args...});
     }
 
     /**

@@ -1,8 +1,8 @@
-#include "core/Application.h"
+#include "core/Game.h"
 
 int main(int argc, char **argv)
 {
-    Application app;
+    Game app;
     app.main();
     return 0;
 }

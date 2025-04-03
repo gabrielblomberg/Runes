@@ -181,12 +181,15 @@ struct _Transform<MetaFunction, TypeList<Head>>
 template<typename List, template<typename T> class MetaFunction>
 using Transform = _Transform<MetaFunction, List>::type;
 
+template<template<typename T> class Template, typename List>
+struct _Apply;
+
 template<template<typename T> class Template, typename Head, typename... Tail>
-struct _Apply
+struct _Apply<Template, TypeList<Head, Tail...>>
 {
     using type = Concatenate<
         TypeList<Template<Head>>,
-        typename _Apply<Template, Tail...>::type
+        typename _Apply<Template, TypeList<Tail...>>::type
     >;
 };
 
@@ -198,6 +201,9 @@ struct _Apply<Template, TypeList<Head>>
 
 /**
  * @brief Apply a template type to each type in the list, yielding the new list.
+ * 
+ * @tparam Template The template to wrap the types of the list in.
+ * @tparam List The list to apply the template to.
  */
 template<template<typename T> class Template, typename List>
 using Apply = _Apply<Template, List>::type;

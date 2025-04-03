@@ -1,7 +1,8 @@
 #include "interface/Board.h"
 
-Board::Board(Vector2i size, Vector2d hexagon_size)
-    : m_size(size)
+Board::Board(ECS &ecs, Vector2i size, Vector2d hexagon_size)
+    : m_entity(ecs.create_entity())
+    , m_size(size)
     , m_texture()
     , m_grid()
     , m_view()
@@ -34,9 +35,14 @@ Board::Board(Vector2i size, Vector2d hexagon_size)
         auto [x, y] = m_grid.corner_offset(i);
         m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
     }
+
+    ecs.add_component<Renderable>(
+        m_entity,
+        [this](RenderSystem &renderer){ render(renderer); }
+    );
 }
 
-void Board::draw(Runes &runes)
+void Board::render(Runes &runes)
 {
     m_texture.clear();
 

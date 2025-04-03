@@ -1,38 +1,12 @@
-#include "Application.h"
+#include "core/EventSystem.h"
 
-#include "core/GameState.h"
-#include "util/StopCondition.h"
+EventSystem::EventSystem(RenderSystem &render_system, std::stop_token stop)
+    : m_window(render_system.window())
+    , m_stop(stop)
+    , m_messenger()
+{}
 
-Application::Application()
-    : m_stop()
-    , m_window("Runes")
-    , m_messenger(m_stop)
-{
-    m_state_thread = std::jthread(&Application::run, this, m_stop.get_token());
-}
-
-void Application::run(std::stop_token stop)
-{
-    std::unique_ptr<State> state = std::make_unique<GameState>(this);
-
-    while (state) {
-        auto extend = state->run(StopCondition(m_stop.get_token()));
-
-        for (auto &state : extend)
-            m_states.push_back(std::move(state));
-
-        if (!m_states.empty()) {
-            state = std::move(m_states.back());
-            m_states.pop_back();
-            continue;
-        }
-
-        state = nullptr;
-        break;
-    }
-}
-
-void Application::main()
+void EventSystem::run()
 {
     sf::Event event;
     while (!m_stop.stop_requested())

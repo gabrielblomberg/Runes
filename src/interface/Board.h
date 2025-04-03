@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "interface/Window.h"
+#include "core/RenderSystem.h"
 #include "util/Hexagon.h"
 #include "util/Vector2.h"
 #include "model/Runes.h"
@@ -10,14 +10,6 @@
 class Board
 {
 public:
-
-    /**
-     * @brief Create a new view of the board.
-     * 
-     * @param size The pixel width and height of the board.
-     * @param hexagon_size The size of the hexagons 
-     */
-    Board(Vector2i size, Vector2d hexagon_size);
 
     /**
      * @brief Get the pixel width and height of the board.
@@ -72,9 +64,20 @@ public:
      * 
      * @param window The window to display the board to.
      */
-    void display(sf::RenderWindow &window);
+    void render(RenderSystem &window);
 
 private:
+
+    /**
+     * @brief Initialise a new board.
+     * 
+     * @param size The pixel width and height of the board.
+     * @param hexagon_size The size of the hexagons 
+     */
+    Board(ECS &ecs, Vector2i size, Vector2d hexagon_size);
+
+    /// The entity of the board.
+    Entity m_entity;
 
     /// The size of the board in pixels.
     Vector2i m_size;

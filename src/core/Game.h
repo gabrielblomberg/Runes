@@ -2,29 +2,29 @@
 
 #include <thread>
 
-#include "core/Message.h"
-#include "util/Messenger.h"
+#include "core/Components.h"
+#include "core/EventSystem.h"
+#include "core/RenderSystem.h"
 #include "util/StopCondition.h"
-#include "interface/Window.h"
 
-class Application
+class Game
 {
 public:
 
     /**
-     * @brief An application state, such as main menu or game screen.
+     * @brief An game state, such as main menu or game screen.
      */
     class State
     {
     public:
 
         /**
-         * @brief Construct the application state.
+         * @brief Construct the game state.
          * 
-         * @param application Pointer to the owning application.
+         * @param game Pointer to the owning game.
          */
-        inline State(Application *application)
-            : m_application(application)
+        inline State(Game *game)
+            : m_game(game)
         {}
 
         /**
@@ -43,55 +43,56 @@ public:
 
     protected:
 
-        // Pointer to the owning application.
-        Application *m_application;
+        // Pointer to the owning game.
+        Game *m_game;
     };
 
     /**
-     * @brief Initialise the application.
+     * @brief Initialise the game.
      */
-    Application();
+    Game();
 
     /**
      * @brief The main thread that handles input events.
-     * @param stop Stop signal to exit.
      */
-    void main();
+    inline void main() {
+        m_event_system.run();
+    }
 
     /**
      * @brief The thread controlling the logic of the application.
      * @param stop Stop signal to exit.
      */
-    void run(std::stop_token stop);
+    void state_machine(std::stop_token stop);
 
     /**
      * @brief Get a reference to the messenger.
      */
-    inline Messenger<Topics> &messenger() {
-        return m_messenger;
+    inline auto &messenger() {
+        return m_event_system.messenger();
     }
 
     /**
      * @brief Get a reference to the window.
      */
-    inline Window &window() {
-        return m_window;
+    inline RenderSystem &renderer() {
+        return m_renderer;
     }
 
 private:
 
-    /// Stop source for stopping the application.
-    std::stop_source m_stop;
+    /// Entity component system.
+    ECS m_ecs;
 
     /// The window that states can draw to.
-    Window m_window;
+    RenderSystem m_renderer;
 
-    /// The messenger for messages between different parts of the program.
-    Messenger<Topics> m_messenger;
+    /// The event system.
+    EventSystem m_event_system;
 
-    /// State of the application.
+    /// State of the game.
     std::vector<std::unique_ptr<State>> m_states;
 
-    /// Thread running the application.
+    /// Thread running the game.
     std::jthread m_state_thread;
 };
