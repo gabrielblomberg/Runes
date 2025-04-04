@@ -2,9 +2,9 @@
 
 #include "util/StopCondition.h"
 
-void Scene::add_entity(Entity entity, RenderFunction render)
+void Scene::add_entity(Entity entity)
 {
-    m_render_system->m_ecs->add_component<Renderable>(render);
+    m_entities.push_back(entity);
 }
 
 void Scene::remove_entity(Entity entity)
@@ -48,7 +48,7 @@ RenderSystem::RenderSystem(ECS &ecs, std::string &&title)
 
 RenderSystem::~RenderSystem()
 {
-    Lock window_lock(m_window.get(), &m_mutex);
+    RenderLock window_lock(m_window.get(), &m_mutex);
     m_window->close();
 }
 
@@ -79,7 +79,7 @@ void RenderSystem::render_thread(std::stop_token stop)
             if (m_current_scene) {
                 std::unique_lock lock(m_current_scene->m_mutex);
                 for (Entity entity : m_current_scene->m_entities)
-                    m_ecs->get_component<Renderable>(entity).render(this);
+                    m_ecs->get_component<Renderable>(entity).render(render_lock);
                 m_window->display();
             }
         }

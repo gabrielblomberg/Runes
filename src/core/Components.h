@@ -26,12 +26,12 @@ struct Component<ComponentType::Position> {
     double y;
 };
 
-class RenderSystem;
+class RenderLock;
 
 /**
  * @brief Function callback for the renderer.
  */
-using RenderFunction = std::function<void(RenderSystem*)>;
+using RenderFunction = std::function<void(RenderLock&)>;
 
 /**
  * @brief Component render function.

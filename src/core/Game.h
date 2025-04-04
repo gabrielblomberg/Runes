@@ -60,13 +60,7 @@ public:
     }
 
     /**
-     * @brief The thread controlling the logic of the application.
-     * @param stop Stop signal to exit.
-     */
-    void state_machine(std::stop_token stop);
-
-    /**
-     * @brief Get a reference to the messenger.
+     * @brief Get the messaging system.
      */
     inline auto &messenger() {
         return m_event_system.messenger();
@@ -75,11 +69,24 @@ public:
     /**
      * @brief Get a reference to the window.
      */
-    inline RenderSystem &renderer() {
+    inline auto &renderer() {
         return m_renderer;
     }
 
+    /**
+     * @brief Get the entity component system.
+     */
+    inline auto &ecs() {
+        return m_ecs;
+    }
+
 private:
+
+    /**
+     * @brief The thread controlling the logic of the application.
+     * @param stop Stop signal to exit.
+     */
+    void state_machine(std::stop_token stop);
 
     /// Entity component system.
     ECS m_ecs;

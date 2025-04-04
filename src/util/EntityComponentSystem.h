@@ -6,6 +6,7 @@
 #include <array>
 #include <bitset>
 #include <unordered_set>
+#include <numeric>
 
 #include "util/TypeList.h"
 
@@ -45,6 +46,15 @@ public:
         /// The entities belonging to this set.
         std::unordered_set<Entity> entities;
     };
+
+    /**
+     * @brief Initialise the como
+     */
+    EntityComponentSystem()
+        : m_available_entities(N)
+    {
+        std::iota(m_available_entities.begin(), m_available_entities.end(), 0);
+    }
 
     /**
      * @brief Create a new empty entity.
@@ -115,24 +125,26 @@ public:
      */
     void remove_entity(Entity entity)
     {
-        auto it = std::lower_bound(
-            m_available_entities.begin(),
-            m_available_entities.end(),
-            entity
-        );
-
-        assert(it == m_available_entities.end() && entity < N && "entity out of range");
+        {
+            auto it = std::lower_bound(
+                m_available_entities.begin(),
+                m_available_entities.end(),
+                entity
+            );
+    
+            assert(it == m_available_entities.end() && entity < N && "entity out of range");
+        }
 
         // Remove components from entity.
         std::apply(
-            []<typename T>(ComponentArray<T> &array){ array.remove(entity); },
+            [entity](auto&... array){ (array.remove(entity), ...); },
             m_components
         );
 
         // Remove entity from systems.
         Signature signature = m_entity_signatures[entity];
         for (auto &set : m_system_entities)
-            if (set.signature & signature)
+            if ((set.signature & signature).any())
                 set.entities.erase(entity);
 
         // Make the entity identifier available again, while maintaining entity
@@ -161,9 +173,12 @@ public:
      * @param args The parts of the component.
      */
     template<std::size_t Component, typename... Args>
-    inline void add_component(Entity entity, Args... args)
+    inline void add_component(Entity entity, Args&&... args)
     {
-        add_component(entity, TypeList::Get<Components, Component>{args...});
+        add_component<Component>(
+            entity,
+            TypeList::Get<Components, Component>(args...)
+        );
     }
 
     /**
@@ -176,11 +191,11 @@ public:
     template<std::size_t Component>
     inline void add_component(Entity entity, TypeList::Get<Components, Component> &&component)
     {
-        std::get<Component>(m_components).add(entity, std::forward(component));
+        std::get<Component>(m_components).add(entity, std::forward<TypeList::Get<Components, Component>>(component));
         Signature &signature = m_entity_signatures[entity].set(Component, true);
 
         for (auto &set : m_system_entities)
-            if (signature & set.signature)
+            if ((signature & set.signature).any())
                 set.entities.insert(entity);
     }
 

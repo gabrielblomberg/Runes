@@ -1,32 +1,32 @@
 #include "interface/Board.h"
 
-Board::Board(ECS &ecs, Vector2i size, Vector2d hexagon_size)
+Board::Board(ECS &ecs, Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
     : m_entity(ecs.create_entity())
-    , m_size(size)
     , m_texture()
     , m_grid()
     , m_view()
     , m_hexagon()
+    , m_runes(&runes)
 {
     // Options for the texture storing the hexagonal grid.
     sf::ContextSettings texture_settings;
     texture_settings.antialiasingLevel = 8;
 
     // Create the texture that contains the board.
-    if (!m_texture.create(size.x, size.y, texture_settings))
+    if (!m_texture.create(pixel_dimensions.x, pixel_dimensions.y, texture_settings))
         throw std::runtime_error("Failed to create runes texture.");
 
     // Define the transformation from the texture to the window. The texture has
     // the given size and should be drawn in the middle of the screen.
-    m_view.setSize((float)m_size.x, (float)m_size.y);
-    m_view.setCenter((float)m_size.x / 2, (float)m_size.y / 2);
+    m_view.setSize((float)pixel_dimensions.x, (float)pixel_dimensions.y);
+    m_view.setCenter((float)pixel_dimensions.x / 2, (float)pixel_dimensions.y / 2);
 
     // Define the hexagonal grid to have the same size d
     m_grid = Hexagon::Grid<Hexagon::GridType::FLAT>(
         hexagon_size.x,
         hexagon_size.y,
-        size.x / 2,
-        size.y / 2
+        pixel_dimensions.x / 2,
+        pixel_dimensions.y / 2
     );
 
     // Create a hexagon that will be drawn.
@@ -38,28 +38,22 @@ Board::Board(ECS &ecs, Vector2i size, Vector2d hexagon_size)
 
     ecs.add_component<Renderable>(
         m_entity,
-        [this](RenderSystem &renderer){ render(renderer); }
+        [this](RenderLock &renderer){ render(renderer); }
     );
 }
 
-void Board::render(Runes &runes)
+void Board::render(RenderLock &renderer)
 {
     m_texture.clear();
 
-    sf::Color colour;
-    if (runes.connected()) {
-        colour = sf::Color::White;
-    }
-    else {
-        colour = sf::Color::Red;
-    }
+    sf::Color colour = m_runes->connected() ? sf::Color::White : sf::Color::Red;
 
     m_hexagon.setFillColor(sf::Color::Black);
     m_hexagon.setOutlineThickness(1);
     m_texture.setView(m_view);
 
-    for (const auto &[a, vertex] : runes.board().vertices()) {
-        draw_hexagon(a, colour);
+    for (const auto &[a, vertex] : m_runes->board().vertices()) {
+        render_hexagon(a, colour);
         auto [x0, y0] = m_grid.to_pixel(a);
 
         for (const auto &[b, edge] : vertex->edges) {
@@ -74,11 +68,22 @@ void Board::render(Runes &runes)
         }
     }
 
-    for (auto &[hex, colour] : m_highlights)
-        draw_hexagon(hex, colour);
+    {
+        std::unique_lock lock(m_mutex);
+        for (auto &[hex, colour] : m_highlights)
+            render_hexagon(hex, colour);
+    }
+
+    m_texture.display();
+
+    sf::Sprite sprite;
+    sprite.setTexture(m_texture.getTexture());
+
+    renderer->setView(m_view);
+    renderer->draw(sprite);
 }
 
-void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)
+void Board::render_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)
 {
     auto [x, y] = m_grid.to_pixel(hexagon);
 
@@ -89,14 +94,4 @@ void Board::draw_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)
 
     m_texture.setView(m_view);
     m_texture.draw(m_hexagon);
-}
-
-void Board::display(sf::RenderWindow &window)
-{
-    m_texture.display();
-
-    sf::Sprite sprite;
-    sprite.setTexture(m_texture.getTexture());
-    window.setView(m_view);
-    window.draw(sprite);
 }

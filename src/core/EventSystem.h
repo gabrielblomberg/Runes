@@ -86,12 +86,14 @@ public:
      * operating system events from.
      * @param stop The stop token.
      */
-    EventSystem(RenderSystem &render_system );
+    EventSystem(RenderSystem &render_system);
 
     /**
      * @brief Get the event system stop token.
      */
-    std::stop_token get_stop();
+    inline std::stop_token get_stop() {
+        return m_stop.get_token();
+    }
 
     /**
      * @brief Run the event system.

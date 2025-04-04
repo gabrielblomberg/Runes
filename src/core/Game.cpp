@@ -13,7 +13,7 @@ Game::Game()
 
 void Game::state_machine(std::stop_token stop)
 {
-    std::unique_ptr<State> state = std::make_unique<GameState>(this);
+    std::unique_ptr<State> state = std::make_unique<GameState>(*this);
 
     while (state) {
         auto extend = state->run(StopCondition(stop));

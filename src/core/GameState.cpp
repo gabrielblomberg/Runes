@@ -4,19 +4,24 @@
 #include "model/Runes.h"
 #include "util/Time.h"
 
-GameState::GameState(Game *app)
-    : Game::State(app)
+GameState::GameState(Game &game)
+    : Game::State(&game)
     , m_board(
-        Vector2i(app->renderer().screen_width(), app->renderer().screen_height()),
+        game.ecs(),
+        m_runes,
+        Vector2i(game.renderer().screen_width(), game.renderer().screen_height()),
         Vector2d(20, 20)
     )
-    , m_scene(app->renderer().scene_create())
+    , m_scene(game.renderer().scene_create())
 {
-    app->messenger().subscribe<CLICK>(
+    m_scene.add_entity(m_board.entity());
+    game.renderer().scene_set(m_scene);
+
+    game.messenger().subscribe<CLICK>(
         [this](const Event<CLICK> &m) { handle_click(m); }
     );
 
-    app->messenger().subscribe<MOUSE>(
+    game.messenger().subscribe<MOUSE>(
         [this](const Event<MOUSE> &m) { handle_mouse(m); }
     );
 }
@@ -43,7 +48,7 @@ void GameState::handle_click(const Event<CLICK> &click)
     }
 }
 
-void GameState::handle_mouse(const Message<MOUSE> &mouse)
+void GameState::handle_mouse(const Event<MOUSE> &mouse)
 {
     static Hexagon::Hexagon<int> last;
     std::scoped_lock<std::mutex> lock(m_mutex);

@@ -12,31 +12,24 @@ class Board
 public:
 
     /**
-     * @brief Get the pixel width and height of the board.
-     * @return The pixel width and height of the board.
+     * @brief Initialise a new board.
+     * 
+     * @param entity The entity of the board.
+     * @param size The pixel width and height of the board.
+     * @param hexagon_size The size of the hexagons 
      */
-    inline const Vector2i &size() {
-        return m_size;
-    }
+    Board(ECS &ecs, Runes &runes, Vector2i size, Vector2d hexagon_size);
 
-    inline const Hexagon::Grid<Hexagon::GridType::FLAT> &grid() {
+    /**
+     * @brief Get the grid.
+     */
+    inline Hexagon::Grid<Hexagon::GridType::FLAT> &grid() {
         return m_grid;
     }
 
-    /**
-     * @brief Draw an entire board to the window.
-     * 
-     * @param window 
-     */
-    void draw(Runes &runes);
-
-    /**
-     * @brief Draw a single hexagon to the window.
-     */
-    void draw_hexagon(
-        Hexagon::Hexagon<int> hexagon,
-        sf::Color colour = sf::Color::White
-    );
+    inline Entity entity() {
+        return m_entity;
+    }
 
     /**
      * @brief Add highlight to a hexagon.
@@ -46,6 +39,7 @@ public:
      */
     void add_highlight(Hexagon::Hexagon<int> hexagon, sf::Color colour)
     {
+        std::unique_lock lock(m_mutex);
         m_highlights[hexagon] = colour;
     }
 
@@ -56,31 +50,29 @@ public:
      */
     inline void remove_highlight(Hexagon::Hexagon<int> hexagon)
     {
+        std::unique_lock lock(m_mutex);
         m_highlights.erase(hexagon);
     }
+
+private:
 
     /**
      * @brief Display the board to a window.
      * 
      * @param window The window to display the board to.
      */
-    void render(RenderSystem &window);
-
-private:
+    void render(RenderLock &renderer);
 
     /**
-     * @brief Initialise a new board.
-     * 
-     * @param size The pixel width and height of the board.
-     * @param hexagon_size The size of the hexagons 
+     * @brief Draw a single hexagon to the window.
      */
-    Board(ECS &ecs, Vector2i size, Vector2d hexagon_size);
+    void render_hexagon(
+        Hexagon::Hexagon<int> hexagon,
+        sf::Color colour = sf::Color::White
+    );
 
     /// The entity of the board.
     Entity m_entity;
-
-    /// The size of the board in pixels.
-    Vector2i m_size;
 
     /// Hexagons to highlight.
     std::unordered_map<Hexagon::Hexagon<int>, sf::Color> m_highlights;
@@ -96,4 +88,8 @@ private:
 
     /// Hexagon to draw.
     sf::ConvexShape m_hexagon;
+
+    Runes *m_runes;
+
+    std::mutex m_mutex;
 };

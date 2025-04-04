@@ -14,7 +14,7 @@ public:
     /**
      * @brief Instantiate a new game state.
      */
-    GameState(Game *app);
+    GameState(Game &app);
 
     /**
      * @brief Runs the main game state.
@@ -45,12 +45,9 @@ private:
     /// The scene of the game state.
     Scene m_scene;
 
-    /// The dimensions of the screen in pixels.
-    Vector2i m_screen_pixels;
-
     /// The game model.
     Runes m_runes;
 
-    /// The of the game.
+    /// The board.
     Board m_board;
 };

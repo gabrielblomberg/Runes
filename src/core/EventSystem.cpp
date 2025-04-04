@@ -1,8 +1,8 @@
 #include "core/EventSystem.h"
 
-EventSystem::EventSystem(RenderSystem &render_system, std::stop_token stop)
-    : m_window(render_system.window())
-    , m_stop(stop)
+EventSystem::EventSystem(RenderSystem &render_system)
+    : m_window(render_system.lock().get())
+    , m_stop()
     , m_messenger()
 {}
 

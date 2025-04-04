@@ -21,6 +21,8 @@ add_executable(
     main.cpp
     core/Game.cpp
     core/GameState.cpp
+    core/EventSystem.cpp
+    core/RenderSystem.cpp
     util/StopCondition.cpp
     model/Runes.cpp
     interface/Board.cpp
