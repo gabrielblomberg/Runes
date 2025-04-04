@@ -8,7 +8,7 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#include "core/Components.h"
+#include "Components.h"
 
 class RenderSystem;
 

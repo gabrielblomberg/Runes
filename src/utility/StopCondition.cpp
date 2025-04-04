@@ -1,4 +1,4 @@
-#include "util/StopCondition.h"
+#include "utility/StopCondition.h"
 
 std::unique_lock<std::mutex> StopCondition::wait(std::function<bool(void)> stop_waiting)
 {

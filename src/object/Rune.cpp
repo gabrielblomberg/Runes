@@ -1,13 +1,18 @@
-#include "interface/Rune.h"
+#include "object/Rune.h"
 
-#include "util/Hexagon.h"
-#include "model/Runes.h"
+#include "utility/Hexagon.h"
+#include "Runes.h"
 
 Entity rune_create(ECS &ecs, Type type)
 {
     Entity entity = ecs.create_entity();
     ecs.add_component<ComponentType::Position>(entity, {0.0, 0.0});
-    ecs.add_component<ComponentType::Renderable>(entity, [this])
+    ecs.add_component<ComponentType::Renderable>(
+        entity,
+        [this](RenderLock &renderer){
+            static 
+        }
+    );
     return entity;
 }
 

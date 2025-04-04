@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/Game.h"
-#include "core/RenderSystem.h"
+#include "Game.h"
+#include "system/RenderSystem.h"
 
 Entity rune_create(ECS &ecs, Type type);
 

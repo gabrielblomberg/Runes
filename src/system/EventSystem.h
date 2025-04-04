@@ -3,9 +3,9 @@
 #include <stop_token>
 #include <SFML/Window.hpp>
 
-#include "util/Messenger.h"
-#include "util/TypeList.h"
-#include "core/RenderSystem.h"
+#include "utility/Messenger.h"
+#include "utility/TypeList.h"
+#include "system/RenderSystem.h"
 
 /**
  * @brief Messages sent in the program.

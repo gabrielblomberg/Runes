@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/EntityComponentSystem.h"
-#include "model/Runes.h"
+#include "utility/EntityComponentSystem.h"
+#include "Runes.h"
 
 #include <functional>
 

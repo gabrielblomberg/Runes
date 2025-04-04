@@ -1,6 +1,6 @@
-#include "core/RenderSystem.h"
+#include "system/RenderSystem.h"
 
-#include "util/StopCondition.h"
+#include "utility/StopCondition.h"
 
 void Scene::add_entity(Entity entity)
 {

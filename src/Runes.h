@@ -7,9 +7,9 @@
 #include <memory>
 #include <optional>
 
-#include "util/Graph.h"
-#include "util/Search.h"
-#include "util/Hexagon.h"
+#include "utility/Graph.h"
+#include "utility/Search.h"
+#include "utility/Hexagon.h"
 
 class Runes
 {

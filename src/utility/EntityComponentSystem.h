@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <numeric>
 
-#include "util/TypeList.h"
+#include "utility/TypeList.h"
 
 /**
  * @brief Identifier of an entity managed by the entity component system.

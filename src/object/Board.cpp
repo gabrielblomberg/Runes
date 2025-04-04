@@ -1,4 +1,4 @@
-#include "interface/Board.h"
+#include "object/Board.h"
 
 Board::Board(ECS &ecs, Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
     : m_entity(ecs.create_entity())

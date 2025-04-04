@@ -1,4 +1,4 @@
-#include "model/Runes.h"
+#include "Runes.h"
 
 using enum Runes::ActionType;
 

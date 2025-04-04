@@ -2,10 +2,10 @@
 
 #include <thread>
 
-#include "core/Components.h"
-#include "core/EventSystem.h"
-#include "core/RenderSystem.h"
-#include "util/StopCondition.h"
+#include "Components.h"
+#include "system/EventSystem.h"
+#include "system/RenderSystem.h"
+#include "utility/StopCondition.h"
 
 class Game
 {

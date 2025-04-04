@@ -1,7 +1,7 @@
 #include "Game.h"
 
-#include "core/GameState.h"
-#include "util/StopCondition.h"
+#include "state/GameState.h"
+#include "utility/StopCondition.h"
 
 Game::Game()
     : m_renderer(m_ecs, "Runes")

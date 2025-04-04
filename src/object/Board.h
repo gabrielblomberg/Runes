@@ -2,10 +2,10 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "core/RenderSystem.h"
-#include "util/Hexagon.h"
-#include "util/Vector2.h"
-#include "model/Runes.h"
+#include "system/RenderSystem.h"
+#include "utility/Hexagon.h"
+#include "utility/Vector2.h"
+#include "Runes.h"
 
 class Board
 {

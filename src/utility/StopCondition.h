@@ -5,7 +5,7 @@
 #include <mutex>
 #include <stop_token>
 
-#include "util/Time.h"
+#include "utility/Time.h"
 
 /**
  * @brief Wrapper around a std::stop_token with methods for waiting on the

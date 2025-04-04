@@ -1,4 +1,4 @@
-#include "core/EventSystem.h"
+#include "system/EventSystem.h"
 
 EventSystem::EventSystem(RenderSystem &render_system)
     : m_window(render_system.lock().get())

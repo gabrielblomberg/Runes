@@ -3,9 +3,9 @@
 #include <functional>
 
 #include "Game.h"
-#include "model/Runes.h"
+#include "Runes.h"
 
-#include "interface/Board.h"
+#include "object/Board.h"
 
 class GameState : public Game::State
 {

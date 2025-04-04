@@ -18,14 +18,14 @@ include_directories(${SFML_INCLUDE_DIRS})
 
 add_executable(
     runes
+    Game.cpp
     main.cpp
-    core/Game.cpp
-    core/GameState.cpp
-    core/EventSystem.cpp
-    core/RenderSystem.cpp
-    util/StopCondition.cpp
-    model/Runes.cpp
-    interface/Board.cpp
+    object/Board.cpp
+    Runes.cpp
+    state/GameState.cpp
+    system/EventSystem.cpp
+    system/RenderSystem.cpp
+    utility/StopCondition.cpp
 )
 
 target_include_directories(runes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

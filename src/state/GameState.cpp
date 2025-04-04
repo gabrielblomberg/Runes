@@ -1,8 +1,8 @@
-#include "core/GameState.h"
+#include "state/GameState.h"
 
-#include "interface/Board.h"
-#include "model/Runes.h"
-#include "util/Time.h"
+#include "object/Board.h"
+#include "Runes.h"
+#include "utility/Time.h"
 
 GameState::GameState(Game &game)
     : Game::State(&game)
