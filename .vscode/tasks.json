@@ -21,12 +21,12 @@
 			"detail": "Compile the most recently configure build",
 			"type": "shell",
 			"windows": {
-				"command": "call scripts/windows/compile.bat ${input:release_type}",
+				"command": "call scripts/windows/compile.bat ${input:build_type}",
 				"problemMatcher": "$msCompile"
 			},
 			"linux"  : {
-				"command": "./scripts/linux/compile.bash",
-                "problemMatcher": "$gcc"
+				"command": "cd build && make -s",
+                "problemMatcher": "$gcc",
 			},
             "options": {
                 "cwd": "${workspaceFolder}",
@@ -36,8 +36,9 @@
 				"reveal": "always",
 				"focus": true,
 				"panel": "dedicated",
-				"showReuseMessage": true,
-				"clear": true
+                "clear": true,
+				"showReuseMessage": false,
+                "close": false,
 			}
         },
         {
@@ -48,7 +49,7 @@
                 "command": "call scripts/windows/configure.bat"
             },
 			"linux"  : {
-                "command": "./configure.bash"
+                "command": "cmake -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_BUILD_TYPE=${input:build_type} -S src -B build"
             },
 			"options": {
                 "cwd": "${workspaceFolder}"
@@ -82,14 +83,14 @@
                 "command": ".\\install\\runes.exe"
             },
 			"linux"  : {
-                "command": "./install/runes"
+                "command": "./build/bin/runes"
             },
             "problemMatcher": []
         }
     ],
     "inputs": [
         {
-            "id": "release_type",
+            "id": "build_type",
             "description": "Release of debug build?",
             "type": "pickString",
             "options": ["Debug", "Release"]

@@ -1,0 +1,17 @@
+{
+    "name": "Runes Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/runes,type=bind",
+    "workspaceFolder": "/workspaces/runes/",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "mhutchie.git-graph",
+                "stkb.rewrap"
+            ]
+        }
+    }
+}

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 # set(CMAKE_FIND_DEBUG_MODE 1)
 project(runes)
 
-set(CMAKE_VERBOSE_MAKEFILE on )
+set(CMAKE_VERBOSE_MAKEFILE on)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -28,8 +28,8 @@ add_executable(
     utility/StopCondition.cpp
 )
 
+target_compile_options(runes PRIVATE $<$<CONFIG:Debug>:-g> $<$<CONFIG:Release>:-O3> -Wall -Werror -Wpedantic)
 target_include_directories(runes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
 target_link_libraries(runes PRIVATE sfml-system sfml-network sfml-graphics sfml-window)
 
 if (WIN32)
@@ -38,4 +38,7 @@ if (WIN32)
 endif()
 
 install(TARGETS runes DESTINATION bin)
-install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION bin OPTIONAL)
+
+if (WIN32)
+    install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION bin OPTIONAL)
+endif()
