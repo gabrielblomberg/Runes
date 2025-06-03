@@ -69,7 +69,7 @@
             "detail": "Remove the build files and directory.",
             "type": "shell",
             "linux": {
-                "command": "rm -rf ${workspaceFolder}/build "
+                "command": "sudo rm -rf ${workspaceFolder}/build "
             },
             "windows": {
                 "command": "rd /S /Q build"
