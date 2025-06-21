@@ -8,48 +8,50 @@ EventSystem::EventSystem(RenderSystem &render_system)
 
 void EventSystem::run()
 {
-    sf::Event event;
     while (!m_stop.stop_requested())
     {
-        m_window->waitEvent(event);
+        auto event = m_window->waitEvent();
+        if (!event)
+            continue;
 
-        switch(event.type)
-        {
-            case sf::Event::Closed: {
+        if (event->is<sf::Event::KeyPressed>()){
+            auto key = event->getIf<sf::Event::KeyPressed>();
+            if (key->code == sf::Keyboard::Key::Escape) {
                 m_stop.request_stop();
-                break;
             }
-            case sf::Event::KeyReleased:
-            case sf::Event::KeyPressed: {
-                if (event.key.code == sf::Keyboard::Key::Escape) {
-                    m_stop.request_stop();
-                }
-                else {
-                    m_messenger.publish<KEY>(
-                        event.key.code,
-                        event.type == sf::Event::KeyPressed
-                    );
-                }
-                break;
+            else {
+                m_messenger.publish<KEY>(key->code, true);
             }
-            case sf::Event::MouseButtonReleased:
-            case sf::Event::MouseButtonPressed: {
-                m_messenger.publish<CLICK>(
-                    event.mouseButton.x,
-                    event.mouseButton.y,
-                    event.type == sf::Event::MouseButtonPressed,
-                    event.mouseButton.button
-                );
-                break;
-            }
-            case sf::Event::MouseMoved: {
-                m_messenger.publish<MOUSE>(
-                    event.mouseMove.x,
-                    event.mouseMove.y
-                );
-                break;
-            }
-            default: break;
+        }
+
+        if (event->is<sf::Event::KeyReleased>()){
+            auto key = event->getIf<sf::Event::KeyReleased>();
+            m_messenger.publish<KEY>(key->code, false);
+        }
+
+        if (event->is<sf::Event::MouseButtonPressed>()){
+            auto mouse = event->getIf<sf::Event::MouseButtonPressed>();
+            m_messenger.publish<CLICK>(
+                mouse->position.x,
+                mouse->position.y,
+                true,
+                mouse->button
+            );
+        }
+
+        if (event->is<sf::Event::MouseButtonReleased>()){
+            auto mouse = event->getIf<sf::Event::MouseButtonReleased>();
+            m_messenger.publish<CLICK>(
+                mouse->position.x,
+                mouse->position.y,
+                false,
+                mouse->button
+            );
+        }
+
+        if (event->is<sf::Event::MouseMoved>()){
+            auto mouse = event->getIf<sf::Event::MouseMoved>();
+            m_messenger.publish<MOUSE>(mouse->position.x, mouse->position.y);
         }
     }
 }

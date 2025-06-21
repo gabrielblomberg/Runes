@@ -1,8 +1,5 @@
 @echo off
 
-:: Initialise the MSVC environment.
-call "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64" || goto :error
-
 :: %1 is the release or debug mode.
 if "%1" NEQ "Debug" if "%1" NEQ "Release" (
     echo Pass either Debug or Release, not "%1" 

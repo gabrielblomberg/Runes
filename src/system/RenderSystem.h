@@ -1,5 +1,6 @@
 #pragma once
 
+#include <thread>
 #include <vector>
 #include <stop_token>
 #include <memory>
@@ -35,10 +36,11 @@ public:
     /**
      * @brief Move a scene.
      */
-    inline Scene operator=(Scene &&scene)
+    inline Scene &operator=(Scene &&scene)
     {
         std::unique_lock lock(scene.m_mutex);
         m_entities = std::move(scene.m_entities);
+        return *this;
     }
 
     /**

@@ -36,7 +36,7 @@ struct Event<CLICK> {
     int x;
     int y;
     bool pressed;
-    int button;
+    sf::Mouse::Button button;
 };
 
 /**
@@ -47,7 +47,7 @@ struct Event<CLICK> {
  */
 template<>
 struct Event<KEY> {
-    char key;
+    sf::Keyboard::Key key;
     bool pressed;
 };
 

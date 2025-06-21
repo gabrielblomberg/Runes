@@ -8,9 +8,6 @@
             "windows": {
                 "command": "call scripts/windows/setup.bat"
             },
-            "linux": {
-                "command": "./scripts/linux/setup.bash"
-            },
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -49,7 +46,16 @@
                 "command": "call scripts/windows/configure.bat"
             },
 			"linux"  : {
-                "command": "cmake -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_BUILD_TYPE=${input:build_type} -S src -B build"
+                "command": [
+                    "cmake",
+                    "-DCMAKE_C_COMPILER=gcc-14",
+                    "-DCMAKE_CXX_COMPILER=g++-14",
+                    "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
+                    "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+                    "-DCMAKE_BUILD_TYPE=${input:build_type}",
+                    "-S src",
+                    "-B build"
+                ]
             },
 			"options": {
                 "cwd": "${workspaceFolder}"
@@ -80,7 +86,7 @@
             "label": "Execute",
             "type": "shell",
             "windows": {
-                "command": ".\\install\\runes.exe"
+                "command": "install\\bin\\runes.exe"
             },
 			"linux"  : {
                 "command": "./build/bin/runes"

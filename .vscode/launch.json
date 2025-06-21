@@ -2,18 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
-            "type": "cppdbg",
+            "name": "Debug Windows",
+            "type": "cppvsdbg",
             "request": "launch",
-            "windows": {
-                "program": "${workspaceFolder}/install/bin/runes.exe",
-            },
-            "linux": {
-                "program": "${workspaceRoot}/build/bin/runes"
-            },
+            "program": "${workspaceFolder}/install/bin/runes.exe",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/install/bin",
+            "externalConsole": false,
+            "preLaunchTask": "Compile",
+        },
+            {
+            "name": "Debug Linux",
+            "request": "launch",
+            "type": "cppdbg",
+            "program": "${workspaceFolder}/install/bin/runes",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "MIMode": "gdb",
             "args": [],
             "stopAtEntry": false,
-            "MIMode": "gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -24,6 +30,6 @@
             "cwd": "${workspaceFolder}",
             "externalConsole": false,
             "preLaunchTask": "Compile",
-        }
+        },
     ]
 }

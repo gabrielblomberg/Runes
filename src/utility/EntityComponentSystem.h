@@ -1,11 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <cassert>
 #include <deque>
 #include <array>
 #include <bitset>
 #include <unordered_set>
+#include <iostream>
 #include <numeric>
 
 #include "utility/TypeList.h"
@@ -16,15 +18,15 @@
 using Entity = std::uint64_t;
 
 /**
- * @tparam Components Typelist of data structures.
+ * @tparam ComponentList Typelist of data structures.
  */
-template<typename Components, std::size_t N>
+template<typename ComponentList, std::size_t N>
 class EntityComponentSystem
 {
 public:
 
     using SystemCallback = std::function<
-        void(EntityComponentSystem<Components, N>*, const std::unordered_set<Entity>&)
+        void(EntityComponentSystem<ComponentList, N>*, const std::unordered_set<Entity>&)
     >;
 
     /**
@@ -33,7 +35,7 @@ public:
      * The signature has a bit set for every component the entity has, and
      * cleared for components the entity does not have.
      */
-    using Signature = std::bitset<TypeList::Size<Components>>;
+    using Signature = std::bitset<TypeList::Size<ComponentList>>;
 
     /**
      * @brief A set of entities with an associated signature.
@@ -83,11 +85,11 @@ public:
         Entity entity = create_entity();
 
         // Add each component.
-        (std::get<TypeList::Index<Components, std::remove_cvref<Args>>>(m_components)
+        (std::get<TypeList::Index<ComponentList, std::remove_cvref<Args>>>(m_components)
             .add(entity, std::forward(args)), ...);
 
         // Set the signature from the component indexes.
-        Signature signature = ((1 << TypeList::Index<Components, std::remove_cvref<Args>>) | ...);
+        Signature signature = ((1 + TypeList::Index<ComponentList, std::remove_cvref<Args>>) | ...);
         m_entity_signatures[entity] = signature;
 
         // Update system entity sets.
@@ -177,7 +179,7 @@ public:
     {
         add_component<Component>(
             entity,
-            TypeList::Get<Components, Component>(args...)
+            TypeList::Get<ComponentList, Component>(args...)
         );
     }
 
@@ -189,9 +191,9 @@ public:
      * @param component The instance of the component.
      */
     template<std::size_t Component>
-    inline void add_component(Entity entity, TypeList::Get<Components, Component> &&component)
+    inline void add_component(Entity entity, TypeList::Get<ComponentList, Component> &&component)
     {
-        std::get<Component>(m_components).add(entity, std::forward<TypeList::Get<Components, Component>>(component));
+        std::get<Component>(m_components).add(entity, std::forward<TypeList::Get<ComponentList, Component>>(component));
         Signature &signature = m_entity_signatures[entity].set(Component, true);
 
         for (auto &set : m_system_entities)
@@ -246,7 +248,7 @@ public:
         auto entity_set = std::find_if(
             m_system_entities.begin(),
             m_system_entities.end(),
-            [](System &system){ system.signature == signature; }
+            [signature](System &system){ system.signature == signature; }
         );
 
         if (entity_set == m_system_entities.end())
@@ -329,7 +331,7 @@ private:
          */
         inline constexpr Signature signature()
         {
-            return 1 << ComponentType;
+            return 1 << TypeList::Index<ComponentList, std::remove_cvref<ComponentType>>;
         }
 
     private:
@@ -398,5 +400,5 @@ private:
     std::vector<System> m_systems;
 
     /// All the component data arrays.
-    TypeList::TupleOf<TypeList::Apply<ComponentArray, Components>> m_components;
+    TypeList::TupleOf<TypeList::Apply<ComponentArray, ComponentList>> m_components;
 };

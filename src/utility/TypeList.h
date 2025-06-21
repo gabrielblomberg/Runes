@@ -116,7 +116,7 @@ struct _Index {
  * @brief Get the type at an index.
  */
 template <typename List, typename Type>
-using Index = _Index<List, Type, 0>::value;
+inline constexpr std::size_t Index = _Index<List, Type, 0>::value;
 
 template<typename List, typename Type, std::uint64_t I>
 struct _Find {

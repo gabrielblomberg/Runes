@@ -6,13 +6,13 @@
 
 GameState::GameState(Game &game)
     : Game::State(&game)
+    , m_scene(game.renderer().scene_create())
     , m_board(
         game.ecs(),
         m_runes,
         Vector2i(game.renderer().screen_width(), game.renderer().screen_height()),
         Vector2d(20, 20)
     )
-    , m_scene(game.renderer().scene_create())
 {
     m_scene.add_entity(m_board.entity());
     game.renderer().scene_set(m_scene);
@@ -38,7 +38,7 @@ void GameState::handle_click(const Event<CLICK> &click)
 
     Hexagon::Hexagon<int> hex = m_board.grid().to_hexagon(click.x, click.y);
 
-    if (click.button == 0) {
+    if (click.button == sf::Mouse::Button::Left) {
         m_runes.perform<Runes::ActionType::PLACE_PLAYER_RUNE>(
             0, Runes::RuneType::VITALITY, hex
         );

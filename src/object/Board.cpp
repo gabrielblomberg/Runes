@@ -10,16 +10,16 @@ Board::Board(ECS &ecs, Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon
 {
     // Options for the texture storing the hexagonal grid.
     sf::ContextSettings texture_settings;
-    texture_settings.antialiasingLevel = 8;
+    texture_settings.antiAliasingLevel = 8;
 
     // Create the texture that contains the board.
-    if (!m_texture.create(pixel_dimensions.x, pixel_dimensions.y, texture_settings))
+    if (!m_texture.resize(pixel_dimensions, texture_settings))
         throw std::runtime_error("Failed to create runes texture.");
 
     // Define the transformation from the texture to the window. The texture has
     // the given size and should be drawn in the middle of the screen.
-    m_view.setSize((float)pixel_dimensions.x, (float)pixel_dimensions.y);
-    m_view.setCenter((float)pixel_dimensions.x / 2, (float)pixel_dimensions.y / 2);
+    m_view.setSize(pixel_dimensions);
+    m_view.setCenter(pixel_dimensions / 2);
 
     // Define the hexagonal grid to have the same size d
     m_grid = Hexagon::Grid<Hexagon::GridType::FLAT>(
@@ -64,7 +64,7 @@ void Board::render(RenderLock &renderer)
                 sf::Vertex(sf::Vector2f(x1, y1))
             };
 
-            m_texture.draw(line, 2, sf::Lines);
+            m_texture.draw(line, 2, sf::PrimitiveType::Lines);
         }
     }
 
@@ -76,8 +76,7 @@ void Board::render(RenderLock &renderer)
 
     m_texture.display();
 
-    sf::Sprite sprite;
-    sprite.setTexture(m_texture.getTexture());
+    sf::Sprite sprite {m_texture.getTexture()};
 
     renderer->setView(m_view);
     renderer->draw(sprite);
@@ -87,7 +86,7 @@ void Board::render_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)
 {
     auto [x, y] = m_grid.to_pixel(hexagon);
 
-    m_hexagon.setPosition(x, y);
+    m_hexagon.setPosition(sf::Vector2f(x, y));
     m_hexagon.setFillColor(colour);
     m_hexagon.setOutlineColor(sf::Color::Black);
     m_hexagon.setOutlineThickness(2);

@@ -1,4 +1,6 @@
 {
+    "dev.containers.executeInWSL": true,
+
     // Default terminals
     "terminal.integrated.defaultProfile.windows": "Command Prompt",
     "terminal.integrated.defaultProfile.linux": "bash",
@@ -9,5 +11,5 @@
 
     // Annoying extensions.
     "cmake.configureOnOpen": false,
-    "C_Cpp.autoAddFileAssociations": false
+    "C_Cpp.autoAddFileAssociations": false,
 }

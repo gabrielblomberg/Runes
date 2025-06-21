@@ -4,6 +4,8 @@ RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
     cmake \
     make \
+    ccache \
+    gdb \
     gcc-14 \
     g++-14 \
     libsfml-dev \

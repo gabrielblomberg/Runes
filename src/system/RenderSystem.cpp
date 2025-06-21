@@ -33,12 +33,12 @@ RenderSystem::RenderSystem(ECS &ecs, std::string &&title)
         modes.begin(),
         modes.end(),
         [](sf::VideoMode &a, sf::VideoMode &b) {
-            return (a.width * a.height) < (b.width * b.height);
+            return (a.size.x * a.size.y) < (b.size.x * b.size.y);
         }
     );
 
     m_window = std::make_unique<sf::RenderWindow>(
-        sf::VideoMode(mode->width, mode->height),
+        sf::VideoMode(mode->size),
         title.c_str(),
         sf::Style::Default
     );

@@ -1,8 +1,5 @@
 @echo off
 
-:: Initialise the MSVC environment. Sets path for cmake, cl.
-call "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64" || goto :error
-
 :: Register vcpkg on path.
 set WORKSPACE=%cd%
 set VCPKG_ROOT=%WORKSPACE%\vcpkg

@@ -1,5 +1,4 @@
 :: Clear directories.
-(rd /S /Q install && mkdir install) || (mkdir install)
 (rd /S /Q build && mkdir build) || (mkdir build)
 (rd /S /Q vcpkg && mkdir vcpkg) || (mkdir vcpkg)
 
