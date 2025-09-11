@@ -15,7 +15,7 @@
             "name": "Debug Linux",
             "request": "launch",
             "type": "cppdbg",
-            "program": "${workspaceFolder}/install/bin/runes",
+            "program": "${workspaceFolder}/build/bin/runes",
             "miDebuggerPath": "/usr/bin/gdb",
             "MIMode": "gdb",
             "args": [],

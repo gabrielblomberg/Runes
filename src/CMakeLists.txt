@@ -12,7 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-find_package(SFML 3 COMPONENTS Main System Window Network Graphics CONFIG REQUIRED)
+set(SFML_STATIC_LIBRARIES TRUE)
+find_package(SFML 3 COMPONENTS System Window Network Graphics CONFIG REQUIRED)
 
 include_directories(${SFML_INCLUDE_DIRS})
 
