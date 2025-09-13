@@ -19,14 +19,21 @@ include_directories(${SFML_INCLUDE_DIRS})
 
 add_executable(
     runes
-    Game.cpp
     main.cpp
-    object/Board.cpp
-    Runes.cpp
-    state/GameState.cpp
-    system/EventSystem.cpp
-    system/RenderSystem.cpp
+    system/logic/Runes.cpp
+    system/logic/RuneSystem.cpp
+    system/interface/view/Game.cpp
+    system/interface/widget/Board.cpp
+    system/MessagingSystem.cpp
+    system/render/RenderSystem.cpp
     utility/StopCondition.cpp
+)
+
+target_precompile_headers(
+    runes
+    PUBLIC
+    "system/EntitySystem.h"
+    "system/MessagingSystem.h"
 )
 
 target_include_directories(runes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

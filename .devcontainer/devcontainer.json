@@ -3,7 +3,7 @@
     "build": {
         "dockerfile": "Dockerfile"
     },
-    "remoteUser": "vscode",
+    // "remoteUser": "vscode",
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/runes,type=bind",
     "workspaceFolder": "/workspaces/runes/",
     "customizations": {
@@ -14,7 +14,7 @@
             ]
         }
     },
-    "postCreateCommand": "sudo chown -R vscode /workspaces",
+    // "postCreateCommand": "sudo chown -R vscode /workspaces",
     "privileged": true,
     "mounts": [
 		"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",

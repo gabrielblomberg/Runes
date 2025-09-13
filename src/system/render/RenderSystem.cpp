@@ -1,30 +1,11 @@
-#include "system/RenderSystem.h"
+#include "system/render/RenderSystem.h"
 
+#include "system/EntitySystem.h"
 #include "utility/StopCondition.h"
 
-void Scene::add_entity(Entity entity)
-{
-    m_entities.push_back(entity);
-}
-
-void Scene::remove_entity(Entity entity)
-{
-    std::unique_lock lock(m_mutex);
-    auto it = std::find(m_entities.begin(), m_entities.end(), entity);
-    if (it != m_entities.end())
-        m_entities.erase(it);
-}
-
-Scene::~Scene()
-{
-    std::unique_lock lock(m_mutex);
-    for (Entity entity : m_entities)
-        m_render_system->m_ecs->remove_entity(entity);
-}
-
-RenderSystem::RenderSystem(ECS &ecs, std::string &&title)
-    : m_window()
-    , m_ecs(&ecs)
+RenderSystem::RenderSystem(EntitySystem *entity_system, std::stop_token stop)
+    : m_stop(stop)
+    , m_entity_system(entity_system)
     , m_current_scene(nullptr)
 {
     // Determine the largest fullscreen mode.
@@ -39,7 +20,7 @@ RenderSystem::RenderSystem(ECS &ecs, std::string &&title)
 
     m_window = std::make_unique<sf::RenderWindow>(
         sf::VideoMode(mode->size),
-        title.c_str(),
+        "Runes",
         sf::Style::Default
     );
 
@@ -52,10 +33,11 @@ RenderSystem::~RenderSystem()
     m_window->close();
 }
 
-void RenderSystem::start(std::stop_token stop)
+void RenderSystem::start()
 {
-    if (m_render_thread.get_id() == std::jthread::id())
-        m_render_thread = std::jthread(&RenderSystem::render_thread, this, stop);
+    // If not already started.
+    if (m_thread.get_id() == std::jthread::id())
+        m_thread = std::jthread(&RenderSystem::main, this);
 }
 
 void RenderSystem::scene_set(Scene &scene)
@@ -64,13 +46,16 @@ void RenderSystem::scene_set(Scene &scene)
     m_current_scene = &scene;
 }
 
-void RenderSystem::render_thread(std::stop_token stop)
+void RenderSystem::main()
 {
+    auto &entity_system = *m_entity_system;
+
     // ~144Hz
     const static Time::Duration delta = 7ms;
-    StopCondition stop_condition {stop};
+    StopCondition stop_condition {m_stop};
 
     while (!stop_condition) {
+        auto wait_until = Time::now() + delta;
 
         {
             auto render_lock = lock();
@@ -79,11 +64,11 @@ void RenderSystem::render_thread(std::stop_token stop)
             if (m_current_scene) {
                 std::unique_lock lock(m_current_scene->m_mutex);
                 for (Entity entity : m_current_scene->m_entities)
-                    m_ecs->get_component<Renderable>(entity).render(render_lock);
+                    entity_system.get_component<Renderable>(entity).render(render_lock);
                 m_window->display();
             }
         }
 
-        stop_condition.wait_until(Time::now() + delta);
+        stop_condition.wait_until(wait_until);
     }
 }

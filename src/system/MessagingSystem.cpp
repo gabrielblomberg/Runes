@@ -1,14 +1,14 @@
-#include "system/EventSystem.h"
+#include "system/MessagingSystem.h"
 
-EventSystem::EventSystem(RenderSystem &render_system)
-    : m_window(render_system.lock().get())
-    , m_stop()
+MessagingSystem::MessagingSystem(sf::Window *window, std::stop_source &&stop_source)
+    : m_window(window)
+    , m_stop_source(stop_source)
     , m_messenger()
 {}
 
-void EventSystem::run()
+void MessagingSystem::main()
 {
-    while (!m_stop.stop_requested())
+    while (!m_stop_source.stop_requested())
     {
         auto event = m_window->waitEvent();
         if (!event)
@@ -17,7 +17,7 @@ void EventSystem::run()
         if (event->is<sf::Event::KeyPressed>()){
             auto key = event->getIf<sf::Event::KeyPressed>();
             if (key->code == sf::Keyboard::Key::Escape) {
-                m_stop.request_stop();
+                m_stop_source.request_stop();
             }
             else {
                 m_messenger.publish<KEY>(key->code, true);

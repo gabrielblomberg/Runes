@@ -2,30 +2,34 @@
 
 #include <functional>
 
-#include "Game.h"
-#include "Runes.h"
+#include "system/interface/Interface.h"
+#include "system/logic/RuneSystem.h"
 
-#include "object/Board.h"
+#include "system/interface/widget/Board.h"
 
-class GameState : public Game::State
+class GameInterface : public Interface
 {
 public:
 
     /**
      * @brief Instantiate a new game state.
      */
-    GameState(Game &app);
+    GameInterface(
+        MessagingSystem *event_system,
+        RenderSystem *render_system,
+        EntitySystem *entity_system
+    );
 
     /**
      * @brief Runs the main game state.
      * @return Nullptr indicating game exit.
      */
-    virtual std::vector<std::unique_ptr<Game::State>> run(StopCondition &&stop) override;
+    virtual std::unique_ptr<Interface> main(StopCondition &&stop) override;
 
     /**
      * @brief Allows threads to join before destroying stop condition.
      */
-    virtual ~GameState() {}; 
+    virtual ~GameInterface() {}; 
 
 private:
 
@@ -45,9 +49,5 @@ private:
     /// The scene of the game state.
     Scene m_scene;
 
-    /// The game model.
-    Runes m_runes;
-
-    /// The board.
     Board m_board;
 };

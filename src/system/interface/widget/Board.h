@@ -1,11 +1,13 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <SFML/System/Vector2.hpp>
 
-#include "system/RenderSystem.h"
+#include "system/render/RenderSystem.h"
+#include "system/EntitySystem.h"
 #include "utility/Hexagon.h"
 #include "utility/Vector2.h"
-#include "Runes.h"
+#include "system/logic/Runes.h"
 
 class Board
 {
@@ -18,7 +20,7 @@ public:
      * @param size The pixel width and height of the board.
      * @param hexagon_size The size of the hexagons 
      */
-    Board(ECS &ecs, Runes &runes, Vector2i size, Vector2d hexagon_size);
+    Board(Runes &runes, Vector2i size, Vector2d hexagon_size);
 
     /**
      * @brief Get the grid.
@@ -58,7 +60,6 @@ private:
 
     /**
      * @brief Display the board to a window.
-     * 
      * @param window The window to display the board to.
      */
     void render(RenderLock &renderer);

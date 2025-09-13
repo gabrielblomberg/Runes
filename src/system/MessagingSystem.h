@@ -5,7 +5,6 @@
 
 #include "utility/Messenger.h"
 #include "utility/TypeList.h"
-#include "system/RenderSystem.h"
 
 /**
  * @brief Messages sent in the program.
@@ -72,11 +71,13 @@ using Topics = TypeList::TypeList<
     Event<MOUSE>
 >;
 
+using Messaging = Messenger<Topics>;
+
 /**
  * @brief The event system responsible for handling and distributing events
  * throughout the system.
  */
-class EventSystem
+class MessagingSystem
 {
 public:
 
@@ -86,19 +87,12 @@ public:
      * operating system events from.
      * @param stop The stop token.
      */
-    EventSystem(RenderSystem &render_system);
-
-    /**
-     * @brief Get the event system stop token.
-     */
-    inline std::stop_token get_stop() {
-        return m_stop.get_token();
-    }
+    MessagingSystem(sf::Window *window, std::stop_source &&stop_source);
 
     /**
      * @brief Run the event system.
      */
-    void run();
+    void main();
 
     /**
      * @brief Get the event system messenger.s
@@ -113,7 +107,7 @@ private:
     sf::Window *m_window;
 
     /// Source to stop.
-    std::stop_source m_stop;
+    std::stop_source m_stop_source;
 
     /// The messenger for messages between different parts of the program.
     Messenger<Topics> m_messenger;

@@ -1,7 +1,7 @@
-#include "object/Board.h"
+#include "system/object/Board.h"
 
-Board::Board(ECS &ecs, Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
-    : m_entity(ecs.create_entity())
+Board::Board(Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
+    : m_entity(s_ecs.create_entity())
     , m_texture()
     , m_grid()
     , m_view()
@@ -36,7 +36,7 @@ Board::Board(ECS &ecs, Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon
         m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
     }
 
-    ecs.add_component<Renderable>(
+    entity_system.add_component<Renderable>(
         m_entity,
         [this](RenderLock &renderer){ render(renderer); }
     );

@@ -1,38 +1,39 @@
-#include "state/GameState.h"
+#include "system/interface/view/Game.h"
 
-#include "object/Board.h"
-#include "Runes.h"
+#include "system/interface/widget/Board.h"
+#include "system/logic/Runes.h"
 #include "utility/Time.h"
 
-GameState::GameState(Game &game)
-    : Game::State(&game)
-    , m_scene(game.renderer().scene_create())
+GameInterface::GameInterface(
+    MessagingSystem *event_system,
+    RenderSystem *render_system,
+    EntitySystem *entity_system
+  ) : Interface(event_system, render_system, entity_system)
     , m_board(
-        game.ecs(),
         m_runes,
-        Vector2i(game.renderer().screen_width(), game.renderer().screen_height()),
+        Vector2i(render_system->screen_width(), render_system->screen_height()),
         Vector2d(20, 20)
     )
 {
     m_scene.add_entity(m_board.entity());
-    game.renderer().scene_set(m_scene);
+    render_system->scene_set(m_scene);
 
-    game.messenger().subscribe<CLICK>(
+    event_system->messenger().subscribe<CLICK>(
         [this](const Event<CLICK> &m) { handle_click(m); }
     );
 
-    game.messenger().subscribe<MOUSE>(
+    event_system->messenger().subscribe<MOUSE>(
         [this](const Event<MOUSE> &m) { handle_mouse(m); }
     );
 }
 
-std::vector<std::unique_ptr<Game::State>> GameState::run(StopCondition &&stop)
+std::unique_ptr<Interface> GameInterface::main(StopCondition &&stop)
 {
     stop.wait();
     return {};
 }
 
-void GameState::handle_click(const Event<CLICK> &click)
+void GameInterface::handle_click(const Event<CLICK> &click)
 {
     std::unique_lock lock(m_mutex);
 
@@ -48,7 +49,7 @@ void GameState::handle_click(const Event<CLICK> &click)
     }
 }
 
-void GameState::handle_mouse(const Event<MOUSE> &mouse)
+void GameInterface::handle_mouse(const Event<MOUSE> &mouse)
 {
     static Hexagon::Hexagon<int> last;
     std::scoped_lock<std::mutex> lock(m_mutex);
