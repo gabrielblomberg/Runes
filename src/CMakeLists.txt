@@ -24,7 +24,6 @@ add_executable(
     system/logic/RuneSystem.cpp
     system/interface/view/Game.cpp
     system/interface/widget/Board.cpp
-    system/MessagingSystem.cpp
     system/render/RenderSystem.cpp
     utility/StopCondition.cpp
 )
@@ -32,8 +31,8 @@ add_executable(
 target_precompile_headers(
     runes
     PUBLIC
-    "system/EntitySystem.h"
-    "system/MessagingSystem.h"
+    "ECS.h"
+    "Messaging.h"
 )
 
 target_include_directories(runes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -43,7 +42,7 @@ if (UNIX)
     target_compile_options(runes PRIVATE $<$<CONFIG:Debug>:-g> $<$<CONFIG:Release>:-O3> -Wall -Werror -Wpedantic)
 elseif (WIN32)
     target_compile_options(runes PUBLIC /W3 /MT$<$<CONFIG:Debug>:d>)
-    target_link_libraries(runes PRIVATE SFML::Main Ws2_32)
+    target_link_libraries(runes PRIVATE Ws2_32)
 endif()
 
 install(TARGETS runes DESTINATION bin)

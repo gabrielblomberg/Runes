@@ -25,10 +25,6 @@ class EntityComponentSystem
 {
 public:
 
-    using SystemCallback = std::function<
-        void(EntityComponentSystem<ComponentList, N>*, const std::unordered_set<Entity>&)
-    >;
-
     /**
      * @brief Bitset signifying the components belonging to an entity.
      * 
@@ -36,18 +32,6 @@ public:
      * cleared for components the entity does not have.
      */
     using Signature = std::bitset<TypeList::Size<ComponentList>>;
-
-    /**
-     * @brief A set of entities with an associated signature.
-     */
-    struct EntitySet {
-
-        /// The signature of the entities.
-        Signature signature;
-
-        /// The entities belonging to this set.
-        std::unordered_set<Entity> entities;
-    };
 
     /**
      * @brief Initialise the como
@@ -92,10 +76,10 @@ public:
         Signature signature = ((1 + TypeList::Index<ComponentList, std::remove_cvref<Args>>) | ...);
         m_entity_signatures[entity] = signature;
 
-        // Update system entity sets.
-        for (auto &set : m_system_entities)
-            if (signature & set.signature)
-                set.entities.insert(entity);
+        // Update entity caches.
+        for (auto &cache : m_entity_caches)
+            if (signature & cache.signature)
+                cache.entities.insert(entity);
 
         return entity;
     }
@@ -143,21 +127,14 @@ public:
             m_components
         );
 
-        // Remove entity from systems.
+        // Remove entity from caches.
         Signature signature = m_entity_signatures[entity];
-        for (auto &set : m_system_entities)
-            if ((set.signature & signature).any())
-                set.entities.erase(entity);
+        for (auto &cache : m_entity_caches)
+            if ((cache.signature & signature).any())
+                cache.entities.erase(entity);
 
-        // Make the entity identifier available again, while maintaining entity
-        // identifier order (makes creating systems easier).
-        auto it = std::lower_bound(
-            m_available_entities.begin(),
-            m_available_entities.end(),
-            entity
-        );
-
-        m_available_entities.insert(it, entity);
+        // Make the entity id available again.
+        m_available_entities.push_back(entity);
     }
 
     /**
@@ -196,9 +173,9 @@ public:
         std::get<Component>(m_components).add(entity, std::forward<TypeList::Get<ComponentList, Component>>(component));
         Signature &signature = m_entity_signatures[entity].set(Component, true);
 
-        for (auto &set : m_system_entities)
-            if ((signature & set.signature).any())
-                set.entities.insert(entity);
+        for (auto &cache : m_entity_caches)
+            if ((signature & cache.signature).any())
+                cache.entities.insert(entity);
     }
 
     /**
@@ -226,43 +203,22 @@ public:
         std::get<Component>(m_components).remove(entity);
         Signature signature = m_entity_signatures[entity].set(Component, false);
 
-        for (auto &set : m_system_entities)
+        for (auto &set : m_entity_caches)
             if (!(signature & set.signature))
                 set.entities.erase(entity);
     }
 
     /**
-     * @brief Add a system.
-     * 
-     * Adds a managed set of entities which are 
-     * 
-     * @param signature The signature of the system.
-     * @returns The identifier of the system.
+     * @brief Get a cache of entities with a given signature.
+     * @returns The cache.
      */
-    void create_system(
-        Signature signature,
-        std::size_t order,
-        SystemCallback callback
-    ) {
-        // Find the system with matching signature if exists.
-        auto entity_set = std::find_if(
-            m_system_entities.begin(),
-            m_system_entities.end(),
-            [signature](System &system){ system.signature == signature; }
-        );
+    const std::unordered_set<Entity> &get_cache(Signature signature)
+    {
+        auto it = m_entity_caches.find(signature);
+        if (it == m_entity_caches.end())
+            it = create_entity_cache(signature);
 
-        if (entity_set == m_system_entities.end())
-            entity_set = create_entity_set(signature);
-
-        // Find the insertion position to maintain system order.
-        auto it = std::lower_bound(
-            m_systems.begin(),
-            m_systems.end(),
-            order,
-            [](const System &s, std::size_t order){ s.order < order; }
-        );
-
-        m_systems.insert(it, {order, callback, &*entity_set});
+        return it->second;
     }
 
 private:
@@ -349,27 +305,14 @@ private:
         std::size_t m_size;
     };
 
-    struct System {
-
-        /// The position of the system on update. Lower ordered systems are
-        /// called first. Same order systems have indeterminate ordering.
-        std::size_t order;
-
-        /// Action to perform when the system is called.
-        SystemCallback callback;
-
-        /// Pointer to the entities belonging to this system.
-        EntitySet *entities;
-    };
-
     /**
      * @brief Create a new entity set.
      * 
      * @param signature The signature of the entity set.
      */
-    auto create_entity_set(Signature signature)
+    auto create_entity_cache(Signature signature)
     {
-        auto [it, _] = m_system_entities.emplace_back(signature, {});
+        auto [it, _] = m_entity_caches.emplace_back(signature, {});
         auto available = m_available_entities.begin();
 
         for (Entity entity = 0; entity < N; ++entity) {
@@ -393,12 +336,9 @@ private:
     /// The signatures of all registered components.
     std::array<Signature, N> m_entity_signatures;
 
-    /// 
-    std::vector<EntitySet> m_system_entities;
-
-    /// All the systems.
-    std::vector<System> m_systems;
+    /// Cache of entities with a given signature.
+    std::unordered_map<Signature, std::unordered_set<Entity>> m_entity_caches;
 
     /// All the component data arrays.
-    TypeList::TupleOf<TypeList::Apply<ComponentArray, ComponentList>> m_components;
+    TypeList::TupleOf<TypeList::Map<ComponentArray, ComponentList>> m_components;
 };

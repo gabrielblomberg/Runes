@@ -36,7 +36,7 @@ Board::Board(Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
         m_hexagon.setPoint(i, Vector2d(x, y) * 0.95);
     }
 
-    entity_system.add_component<Renderable>(
+    ecs.add_component<Renderable>(
         m_entity,
         [this](RenderLock &renderer){ render(renderer); }
     );

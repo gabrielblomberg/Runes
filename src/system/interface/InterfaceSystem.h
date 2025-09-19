@@ -17,7 +17,7 @@ public:
     InterfaceSystem(
         RenderSystem *render_system,
         MessagingSystem *event_system,
-        std::stop_token stop
+        std::stop_source stop
     );
 
     /**
@@ -33,10 +33,9 @@ private:
 
     void main();
 
-    std::stop_token m_stop;
+    std::stop_source m_stop;
     std::unique_ptr<Interface> m_interface;
-    RenderSystem *m_render_system;
-    MessagingSystem *m_event_system;
+    Messaging *m_messenger;
     std::jthread m_thread;
 };
 

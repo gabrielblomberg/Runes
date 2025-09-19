@@ -12,25 +12,69 @@
 
 #include "utility/TypeList.h"
 
-// struct Topic
-// {
-//     using Message = type;
-// };
+template<typename Topic>
+struct IsBroadcastTopic {
+    static const constexpr bool value = requires {
+        typename Topic::Message;
+    };
+    constexpr operator bool() { return value; };
+};
+
+template<typename Topic>
+struct IsRequestTopic {
+    static const constexpr bool value = requires {
+        typename Topic::Request;
+        typename Topic::Response;
+    };
+    constexpr operator bool() { return value; };
+};
+
+template<typename Topic>
+struct IsMemoryTopic {
+    static const constexpr bool value = requires {
+        typename Topic::Message;
+        {Topic::DEFAULT} -> std::same_as<Topic::Message>; 
+    };
+    constexpr operator bool() { return value; };
+};
 
 /**
- * @brief A class responsible for being an intermediary between code publishing
- * messages and code subscribed to them.
- * 
- * The topic types must not be aliases or else the message type is duped and
- * the messenger will use the same stream for both channels. Each type should
- * be a struct.
- * 
- * @tparam Topics A type list of the types of each message
+ * @brief Broadcast topics emit messages which can be subscribed to.
+ */
+template<typename Topic>
+requires requires { IsBroadcastTopic<Topic>; }
+struct BroadcastTopic {};
+
+/**
+ * @brief Request topics make a request to a component, which responds with
+ * data.
+ */
+template<typename Topic>
+requires requires { IsRequestTopic<Topic>; }
+struct RequestTopic {};
+
+/**
+ * @brief Memory topics store cached values which can be subscribed to on
+ * update, and have a default value.
+ */
+template<typename Topic>
+requires requires { IsMemoryTopic<Topic>; }
+struct MemoryTopic {};
+
+/**
+ * @brief Messenger of topics.
+ * @tparam Topic The topics.
  */
 template<typename Topics>
 class Messenger
 {
 public:
+
+    using BroadcastTopics = TypeList::Filter<Topics, IsBroadcastTopic>;
+    using MemoryTopics = TypeList::Filter<Topics, IsMemoryTopic>;
+    using RequestTopics = TypeList::Filter<Topics, IsRequestTopic>;
+
+    using SubscriptionTopics = TypeList::Concatenate<BroadcastTopics, MemoryTopics>;
 
     /**
      * @brief Construct a new Messenger object
@@ -56,10 +100,27 @@ public:
      * 
      * @returns An integer identifier of the subscription.
      */
-    template<std::size_t Topic>
+    template<typename Topic>
     void subscribe(
-        std::function<void(const TypeList::Get<Topics, Topic> &)> &&function
-    );
+        std::function<void(const TypeList::Find<SubscriptionTopics, Topic>::Message &)> &&function
+    ) {
+        // Lock the vector of callbacks for updating.
+        const constexpr auto Index = TypeList::Index<Topics, Topic>;
+        auto &channel = std::get<Topic>(Index)>(m_channels);
+
+        std::scoped_lock lock(channel.mutex);
+        channel.callbacks.push_back(
+            [function](void *message){
+                function(*static_cast<Topic::Message*>(message));
+            }
+        );
+
+        // If it's a memory topic, immediately call the function with the
+        // currently cached value.
+        if constexpr ( requires {IsMemoryTopic<Topic>} ) {
+            channel.callbacks.back()(static_cast<Topic::Message*>(&m_memory[Index]));
+        }
+    }
 
     /**
      * @brief Publish data to a topic.
@@ -67,8 +128,18 @@ public:
      * @tparam Topic The topic to publish data to.
      * @param data The data to publish to all subscribers.
      */
-    template<std::size_t Topic>
-    void publish(TypeList::Get<Topics, Topic> &&data);
+    template<typename Topic>
+    void publish(TypeList::Find<SubscriptionTopics, Topic>::Message &&data)
+    {
+        std::scoped_lock lock(m_mutex);
+        m_queue.emplace_back(std::make_pair(
+                TypeList::Index<SubscriptionTopics, Topic>,
+                std::make_shared<TypeList::Find<SubscriptionTopics, Topic>::Message>(data)
+            ));
+        }
+
+        m_condition.notify_all();
+    }
 
     /**
      * @brief Publish data to a topic.
@@ -76,19 +147,35 @@ public:
      * @tparam Topic The topic to publish data to.
      * @param args The data to publish to all subscribers.
      */
-    template<std::size_t Topic, typename... Args>
+    template<typename Topic, typename... Args>
     inline void publish(Args&&... args) {
         publish<Topic>(
-            TypeList::Get<Topics, Topic>(std::forward<Args>(args)...)
+            TypeList::Find<SubscriptionTopics, Topic>::Message(std::forward<Args>(args)...)
         );
+    }
+
+    /**
+     * @brief Read memory values from memory topics directly.
+     */
+    template<typename Topic>
+    inline TypeList::Find<MemoryTopics, Topic>::Message get()
+    {
+        std::unique_lock lock(m_mutex);
+        const constexpr auto Index = TypeList::Index<SubscriptionTopics, Topic>;
+        return std::get<Index>(m_memory);
     }
 
 private:
 
+    template<typename T>
+    struct GetValue {
+        using value = T::Message;
+    };
+
     /**
      * @brief Channel type.
      */
-    struct Channel
+    struct Subscriptions
     {
         // Mutex protecting concurrent calling back of call backs.
         std::mutex mutex;
@@ -99,13 +186,15 @@ private:
 
     /**
      * @brief Thread of each worker processing messages.
-     * 
      * @param stop A stop token to stop the worker thread.
      */
     void worker(std::stop_token stop);
 
     /// Channels for each topic.
-    std::array<Channel, TypeList::Size<Topics>> m_channels;
+    std::array<Subscriptions, TypeList::Size<SubscriptionTopics>> m_channels;
+
+    /// Values of memory topics.
+    TypeList::TupleOf<TypeList::Map<GetValue, MemoryTopics>> m_memory;
 
     /// Queues of messages to be processed.
     std::deque<std::pair<std::size_t, std::shared_ptr<void>>> m_queue;
@@ -143,35 +232,6 @@ template<typename Topics>
 Messenger<Topics>::~Messenger()
 {
     m_stop_source.request_stop();
-}
-
-template<typename Topics>
-template<std::size_t Topic>
-void Messenger<Topics>::subscribe(
-    std::function<void(const TypeList::Get<Topics, Topic> &)> &&function
-) {
-    // Lock the vector of callbacks for updating.
-    std::scoped_lock lock(std::get<Topic>(m_channels).mutex);
-    std::get<Topic>(m_channels).callbacks.push_back(
-        [function](void *message){
-            function(*static_cast<TypeList::Get<Topics, Topic>*>(message));
-        }
-    );
-}
-
-template<typename Topics>
-template<std::size_t Topic>
-void Messenger<Topics>::publish(TypeList::Get<Topics, Topic> &&message)
-{
-    {
-        std::scoped_lock lock(m_mutex);
-        m_queue.emplace_back(std::make_pair(
-            Topic,
-            std::make_shared<TypeList::Get<Topics, Topic>>(message)
-        ));
-    }
-
-    m_condition.notify_all();
 }
 
 template<typename Topics>

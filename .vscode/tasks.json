@@ -43,7 +43,7 @@
 			"detail": "Generate build files.",
 			"type": "shell",
 			"windows": {
-                "command": "call scripts/windows/configure.bat"
+                "command": "call scripts/windows/configure.bat ${input:build_type}"
             },
 			"linux"  : {
                 "command": "./scripts/linux/configure.bash ${input:build_type}"

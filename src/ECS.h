@@ -1,7 +1,7 @@
 #pragma once
 
 #include "utility/EntityComponentSystem.h"
-#include "logic/Runes.h"
+#include "system/logic/Runes.h"
 
 #include <functional>
 
@@ -73,4 +73,4 @@ using Components = TypeList::TypeList<
 /**
  * @brief The entity component system used for the game.
  */
-using EntitySystem = EntityComponentSystem<Components, MAX_ENTITIES>;
+using ECS = EntityComponentSystem<Components, MAX_ENTITIES>;

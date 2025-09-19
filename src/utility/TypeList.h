@@ -44,6 +44,8 @@ struct _Size<TypeList<Types...>> {
 template <typename List>
 inline constexpr std::size_t Size = _Size<List>::value;
 
+// Front
+
 template <typename List>
 struct _Front;
 
@@ -57,6 +59,8 @@ struct _Front<TypeList<Head, Tail...>> {
  */
 template <typename List>
 using Front = typename _Front<List>::type;
+
+// Push front
 
 template <typename Type, typename List>
 struct _PushFront;
@@ -72,6 +76,8 @@ struct _PushFront<Type, TypeList<Head, Tail...>> {
 template <typename Type, typename Head, typename... Tail>
 using PushFront = typename _PushFront<Type, TypeList<Head, Tail...>>::type;
 
+// Pop front
+
 template <typename List>
 struct _PopFront;
 
@@ -86,13 +92,15 @@ struct _PopFront<TypeList<Head, Tail...>> {
 template <typename List>
 using PopFront = typename _PopFront<List>::type;
 
-template <typename List, std::uint64_t I>
+// Get
+
+template<typename List, std::uint64_t I>
 struct _Get;
 
-template <typename List, std::uint64_t I>
+template<typename List, std::uint64_t I>
 struct _Get : public _Get<PopFront<List>, I - 1> {};
 
-template <typename List>
+template<typename List>
 struct _Get<List, 0> : public _Front<List> {};
 
 /**
@@ -101,9 +109,11 @@ struct _Get<List, 0> : public _Front<List> {};
 template<typename List, std::uint64_t I>
 using Get = _Get<List, I>::type;
 
+// Index
+
 template <typename List, typename Type, std::uint64_t I>
 struct _Index {
-    static_assert(I < Size<List>);
+    static_assert(I < Size<List> && "typelist index out of range");
     static const constexpr std::size_t value = I;
     using type = std::conditional_t<
         std::is_same_v<Front<List>, Type>,
@@ -118,9 +128,11 @@ struct _Index {
 template <typename List, typename Type>
 inline constexpr std::size_t Index = _Index<List, Type, 0>::value;
 
+// Find
+
 template<typename List, typename Type, std::uint64_t I>
 struct _Find {
-    static_assert(I < Size<List> && "find failed");
+    static_assert(I < Size<List> && "typelist does not contain type");
 
     struct Value {
         static const constexpr std::size_t value = I;
@@ -139,6 +151,31 @@ struct _Find {
  */
 template<typename List, typename T>
 using Find = _Find<List, T, 0>::value;
+
+// Contains
+
+template<typename List, typename T, std::int64_t I>
+struct _Contains {
+    static const constexpr bool value = std::conditional_t<
+        std::is_same_v<Front<List>, T>,
+        std::true_type,
+        _Contains<PopFront<List>, T, I - 1>
+    >::value;
+};
+
+template<typename List, typename T>
+struct _Contains<List, T, -1> {
+    static const constexpr bool value = false;
+};
+
+/**
+ * @brief Contains for the index of a type in a type list.
+ * @returns The first index of that type.
+ */
+template<typename List, typename T>
+using Contains = _Contains<List, T, Size<List> - 1>::value;
+
+// Concatenate
 
 template<typename Left, typename Right>
 struct _Concatenate;
@@ -160,53 +197,89 @@ struct _Concatenate<
 template<typename Left, typename Right>
 using Concatenate = _Concatenate<Left, Right>::type;
 
-template<template<typename T> class MetaFunction, typename Head, typename... Tail>
-struct _Transform
+// Map a template function to types in a typelist.
+
+template<template<typename T> class Function, typename Head, typename... Tail>
+struct _Map
 {
     using type = Concatenate<
-        TypeList<typename MetaFunction<Head>::type>,
-        typename _Transform<MetaFunction, Tail...>::type
+        TypeList<typename Function<Head>::type>,
+        typename _Map<Function, Tail...>::type
     >;
 };
 
-template<template<typename T> class MetaFunction, typename Head>
-struct _Transform<MetaFunction, TypeList<Head>>
+template<template<typename T> class Function, typename Head>
+struct _Map<Function, TypeList<Head>>
 {
-    using type = TypeList<typename MetaFunction<Head>::type>;
+    using type = TypeList<typename Function<Head>::type>;
 };
 
 /**
- * @brief Transform types in a type list with a meta function.
+ * @brief Map types in a type list with a meta function.
  */
-template<typename List, template<typename T> class MetaFunction>
-using Transform = _Transform<MetaFunction, List>::type;
+template<template<typename T> class Function, typename List>
+using Map = _Map<Function, List>::type;
 
-template<template<typename T> class Template, typename List>
-struct _Apply;
+// Wrap
 
-template<template<typename T> class Template, typename Head, typename... Tail>
-struct _Apply<Template, TypeList<Head, Tail...>>
+template<template<typename T> class Wrapper, typename List>
+struct _Wrap;
+
+template<template<typename T> class Wrapper, typename Head, typename... Tail>
+struct _Wrap<Wrapper, TypeList<Head, Tail...>>
 {
     using type = Concatenate<
-        TypeList<Template<Head>>,
-        typename _Apply<Template, TypeList<Tail...>>::type
+        TypeList<Wrapper<Head>>,
+        typename _Wrap<Wrapper, TypeList<Tail...>>::type
     >;
 };
 
-template<template<typename T> class Template, typename Head>
-struct _Apply<Template, TypeList<Head>>
+template<template<typename T> class Wrapper, typename Head>
+struct _Wrap<Wrapper, TypeList<Head>>
 {
-    using type = TypeList<Template<Head>>;
+    using type = TypeList<Wrapper<Head>>;
 };
 
 /**
- * @brief Apply a template type to each type in the list, yielding the new list.
+ * @brief Wrap each type in the list with another type.
  * 
- * @tparam Template The template to wrap the types of the list in.
+ * @tparam Wrapper The template to wrap the types of the list in.
  * @tparam List The list to apply the template to.
  */
-template<template<typename T> class Template, typename List>
-using Apply = _Apply<Template, List>::type;
+template<template<typename T> class Wrapper, typename List>
+using Wrap = _Wrap<Wrapper, List>::type;
+
+// Filter
+
+template<template<typename T> class Conditional, typename Filtered, typename Head, typename... Tail>
+struct _Filter
+{
+    using type = _Filter<
+        Conditional,
+        std::conditional_t<
+            Conditional<Head>::value,
+            Concatenate<Filtered, TypeList<Head>>,
+            Filtered
+        >,
+        Tail...
+    >;
+};
+
+template<template<typename T> class Conditional, typename Filtered, typename Head>
+struct _Filter<Conditional, Filtered, TypeList<Head>>
+{
+    using type = std::conditional_t<
+        Conditional<Head>::value,
+        Concatenate<Filtered, TypeList<Head>>,
+        Filtered
+    >;
+};
+
+/**
+ * @brief Filter types in a type list with a meta function.
+ */
+template<typename List, template<typename T> class Conditional>
+using Filter = _Filter<Conditional, TypeList<>, List>::type;
 
 // Tuple.
 
@@ -224,7 +297,7 @@ struct _TupleOf<TypeList<Head, Tail...>> {
 template<typename List>
 using TupleOf = _TupleOf<List>::type;
 
-// Tuple.
+// Variant.
 
 template<typename Head, typename... Tail>
 struct _Variant;

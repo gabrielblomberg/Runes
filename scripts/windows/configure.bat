@@ -12,6 +12,7 @@ cd build
 cmake ^
     -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake" ^
     -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+    -DCMAKE_BUILD_TYPE=%1 ^
     -Wno-dev ^
     "%WORKSPACE%/src" ^
     || goto :error

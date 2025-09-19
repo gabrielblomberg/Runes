@@ -7,8 +7,8 @@
 GameInterface::GameInterface(
     MessagingSystem *event_system,
     RenderSystem *render_system,
-    EntitySystem *entity_system
-  ) : Interface(event_system, render_system, entity_system)
+    EntitySystem *ecs
+  ) : Interface(event_system, render_system, ecs)
     , m_board(
         m_runes,
         Vector2i(render_system->screen_width(), render_system->screen_height()),

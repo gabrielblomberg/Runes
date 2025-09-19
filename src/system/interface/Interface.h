@@ -21,10 +21,10 @@ public:
     inline Interface(
         MessagingSystem *event_system,
         RenderSystem *render_system,
-        EntitySystem *entity_system
+        EntitySystem *ecs
       ) : m_event_system(event_system)
         , m_render_system(render_system)
-        , m_entity_system(entity_system)
+        , m_entity_system(ecs)
     {}
 
     /**
@@ -42,9 +42,6 @@ public:
 
 protected:
 
-    MessagingSystem *m_event_system;
 
-    RenderSystem *m_render_system;
-
-    EntitySystem *m_entity_system;
+    ECS *m_ecs;
 };

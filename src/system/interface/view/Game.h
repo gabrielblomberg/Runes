@@ -17,7 +17,7 @@ public:
     GameInterface(
         MessagingSystem *event_system,
         RenderSystem *render_system,
-        EntitySystem *entity_system
+        EntitySystem *ecs
     );
 
     /**
