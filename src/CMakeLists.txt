@@ -28,12 +28,12 @@ add_executable(
     utility/StopCondition.cpp
 )
 
-target_precompile_headers(
-    runes
-    PUBLIC
-    "ECS.h"
-    "Messaging.h"
-)
+# target_precompile_headers(
+#     runes
+#     PUBLIC
+#     "ECS.h"
+#     "Messaging.h"
+# )
 
 target_include_directories(runes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(runes PRIVATE SFML::System SFML::Network SFML::Graphics SFML::Window)

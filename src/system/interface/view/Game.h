@@ -46,8 +46,5 @@ private:
     /// Mutex protecting concurrent access to the game state.
     std::mutex m_mutex;
 
-    /// The scene of the game state.
-    Scene m_scene;
-
     Board m_board;
 };

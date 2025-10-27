@@ -13,18 +13,8 @@ class Interface
 {
 public:
 
-    /**
-     * @brief Construct the game state.
-     * 
-     * @param interface Pointer to the interface.
-     */
-    inline Interface(
-        MessagingSystem *event_system,
-        RenderSystem *render_system,
-        EntitySystem *ecs
-      ) : m_event_system(event_system)
-        , m_render_system(render_system)
-        , m_entity_system(ecs)
+    inline Interface(EntitySystem *ecs)
+        : m_ecs(ecs)
     {}
 
     /**
@@ -41,7 +31,6 @@ public:
     virtual std::unique_ptr<Interface> main(StopCondition &&stop) = 0;
 
 protected:
-
 
     ECS *m_ecs;
 };

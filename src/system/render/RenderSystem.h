@@ -24,7 +24,7 @@ public:
      * @brief Create the rendering system.
      * @param title The title of the rendering window.
      */
-    RenderSystem(ECS *ecs, Messaging *messenger, std::stop_token stop);
+    RenderSystem(ECS *ecs, EventManager *events, sf::RenderWindow &window, std::stop_token stop);
 
     /**
      * @brief Closes the window.
@@ -62,7 +62,7 @@ private:
     void main();
 
     /// The window containing graphics.
-    std::unique_ptr<sf::RenderWindow> m_window;
+    sf::RenderWindow *m_window;
 
     std::mutex m_mutex;
 };

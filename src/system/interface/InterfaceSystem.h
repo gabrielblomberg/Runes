@@ -14,11 +14,7 @@ public:
     /**
      * @brief Create the interface.
      */
-    InterfaceSystem(
-        RenderSystem *render_system,
-        MessagingSystem *event_system,
-        std::stop_source stop
-    );
+    InterfaceSystem(ECS *ecs, EventManager *events, std::stop_token stop);
 
     /**
      * @brief Start the interface.
@@ -33,9 +29,7 @@ private:
 
     void main();
 
-    std::stop_source m_stop;
+    std::stop_token m_stop;
     std::unique_ptr<Interface> m_interface;
-    Messaging *m_messenger;
     std::jthread m_thread;
 };
-

@@ -17,8 +17,8 @@
     // "postCreateCommand": "sudo chown -R vscode /workspaces",
     "privileged": true,
     "mounts": [
-		"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
-		"source=/mnt/wslg,target=/mnt/wslg,type=bind"
+		// "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+		// "source=/mnt/wslg,target=/mnt/wslg,type=bind"
 		// "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached",
 	],
     "containerEnv": {

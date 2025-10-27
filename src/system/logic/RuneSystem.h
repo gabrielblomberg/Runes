@@ -1,16 +1,17 @@
 #pragma once
 
 #include "system/logic/Runes.h"
+#include "system/System.h"
 
-class RuneSystem
+class RuneSystem : public System
 {
 public:
 
-    RuneSystem() = default;
+    RuneSystem(ECS *ecs, EventManager *events, std::stop_token stop)
+        : System(ecs, events, stop)
+    {}
 
-    Runes &get() {
-        return m_runes;
-    }
+    void step();
 
 private:
 
