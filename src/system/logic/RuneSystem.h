@@ -7,14 +7,12 @@ class RuneSystem : public System
 {
 public:
 
-    RuneSystem(ECS *ecs, EventManager *events, std::stop_token stop)
-        : System(ecs, events, stop)
-    {}
-
-    void step();
+    RuneSystem(ECS *ecs, EventManager *events, std::stop_token stop);
 
 private:
 
     /// The game model.
     Runes m_runes;
+
+    Subscriptions m_subscriptions;
 };

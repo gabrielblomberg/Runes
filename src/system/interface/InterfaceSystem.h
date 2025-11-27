@@ -5,7 +5,28 @@
 #include <thread>
 
 #include "utility/StopCondition.h"
-#include "system/interface/Interface.h"
+#include "EventManager.h"
+#include "ECS.h"
+
+class InterfaceSystem;
+
+class Interface
+{
+public:
+
+    inline Interface(InterfaceSystem *interface_system);
+
+    inline virtual ~Interface() {};
+
+    virtual std::unique_ptr<Interface> step() = 0;
+
+protected:
+
+    std::stop_token m_stop;
+    InterfaceSystem *m_interface_system;
+    ECS *m_ecs;
+    EventManager *m_events;
+};
 
 class InterfaceSystem
 {
@@ -16,12 +37,7 @@ public:
      */
     InterfaceSystem(ECS *ecs, EventManager *events, std::stop_token stop);
 
-    /**
-     * @brief Start the interface.
-     */
-    void start();
-
-    void handle_input();
+    void step();
 
 private:
 
@@ -30,6 +46,7 @@ private:
     void main();
 
     std::stop_token m_stop;
-    std::unique_ptr<Interface> m_interface;
-    std::jthread m_thread;
+    ECS *m_ecs;
+    EventManager *m_events;
+    std::unique_ptr<Interface> m_state;
 };

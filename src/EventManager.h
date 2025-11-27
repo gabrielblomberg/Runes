@@ -5,6 +5,7 @@
 
 #include "utility/TypeList.h"
 #include "utility/Topic.h"
+#include "system/logic/Runes.h"
 
 namespace Message
 {
@@ -39,6 +40,17 @@ namespace Message
         int y;
     };
 
+    struct ScreenInfo {
+        int width;
+        int height;
+    };
+
+    using Connected = bool;
+    using PlaceRuneRequest = Runes::PlaceRune;
+    using AddPlayerRequest = Runes::AddPlayer;
+    using GiveRuneRequest = Runes::GiveRune;
+    using MoveRuneRequest = Runes::MoveRune;
+
 } // namespace Message
 
 namespace Topic {
@@ -46,33 +58,44 @@ namespace Topic {
 using Click = BroadcastTopic<Message::Click>;
 using Key = BroadcastTopic<Message::Key>;
 using Mouse = BroadcastTopic<Message::Mouse>;
+using Connected = BroadcastTopic<Message::Connected>;
+using Screen = MemoryTopic<Message::ScreenInfo>;
+using PlaceRune = RequestTopic<Runes::PlaceRune, bool>;
+using AddPlayer = RequestTopic<Runes::AddPlayer, bool>;
+using GiveRune = RequestTopic<Runes::GiveRune, bool>;
+using MoveRune = RequestTopic<Runes::MoveRune, bool>;
 
 } // namespace Topic
 
-class EventManager
+using Topics = TypeList::TypeList<
+    Topic::Click,
+    Topic::Key,
+    Topic::Mouse,
+    Topic::Connected,
+    Topic::Screen,
+    Topic::PlaceRune,
+    Topic::AddPlayer,
+    Topic::GiveRune,
+    Topic::MoveRune
+>;
+
+class EventManager : public Messenger<Topics>
 {
 public:
 
-    EventSystem(sf::Window *window, std::stop_source &&stop_source)
-        : m_window(window)
-        , click(stop)
-        , key(stop)
-        , mouse(stop)
+    EventManager(sf::Window *window, std::stop_source &&stop_source)
+        : Messenger<Topics>(stop_source.get_token())
+        , m_stop(stop_source)
+        , m_window(window)
     {}
-
-private:
 
     void step();
 
+private:
+    
     /// Source to stop.
-    std::stop_source  m_stop;
-
+    std::stop_source m_stop;
+    
     /// Pointer to the window to handle operating system events from.
     sf::Window *m_window;
-
-public:
-
-    Topic::Click click;
-    Topic::Key key;
-    Topic:::Mouse mouse;
 };

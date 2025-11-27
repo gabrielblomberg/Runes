@@ -28,19 +28,35 @@ public:
         VITALITY
     };
 
-    /**
-     * @brief The actions that can be performed in the game.
-     */
-    enum class ActionType
-    {
-        ADD_PLAYER,
-        GIVE_PLAYER_RUNE,
-        MOVE_PLAYER_RUNE,
-        PLACE_PLAYER_RUNE
+    struct AddPlayer {
+        std::string name;
     };
 
-    using enum RuneType;
-    using enum ActionType;
+    struct GiveRune {
+        std::size_t player_id;
+        Runes::RuneType rune;
+        std::size_t n;
+    };
+
+    struct PlaceRune {
+        std::size_t player_id;
+        Runes::RuneType rune;
+        Hexagon::Hexagon<int> hexagon;
+    };
+
+    struct MoveRune {
+        std::size_t player_id;
+        Hexagon::Hexagon<int> from;
+        Hexagon::Hexagon<int> to;
+    };
+
+    std::optional<std::size_t> add_player(const AddPlayer &request);
+
+    bool give_rune(const GiveRune &request);
+
+    bool place_rune(const PlaceRune &request);
+
+    bool move_rune(const MoveRune &request);
 
     /**
      * @brief A player in the game.
@@ -116,40 +132,6 @@ public:
     using Board = Graph<Hexagon::Hexagon<int>, Rune>;
 
     /**
-     * @brief Generic structure containing actions performed in the game,
-     * specialised for each type of action.
-     * 
-     * Contains all information about an action performed in the game, including
-     * any consequences of the action and arguments, depending on how it is
-     * defined and used in the corresponding Action() call.
-     */
-    template<ActionType>
-    struct ActionData;
-
-    /**
-     * @brief An action pointer is a pair of action type and a pointer to the
-     * data of the action type.
-     */
-    struct Action {
-        ActionType type;
-        std::shared_ptr<void> data;
-    };
-
-    /**
-     * @brief Perform an action in the game.
-     * 
-     * Requires the arguments to be able to construct an instance of ActionType.
-     * 
-     * @tparam A The type of action to perform.
-     * @param args The arguments to the action.
-     * 
-     * @returns If the action was successful and a pointer to information
-     * about the action.
-     */
-    template<ActionType A, typename... Args>
-    std::tuple<bool, Action> perform(Args&&... args);
-
-    /**
      * @brief Get all the players that have been added to the game.
      * @return The current players.
      */
@@ -167,18 +149,6 @@ public:
     bool connected();
 
 private:
-
-    /**
-     * @brief Function overloaded to define what happens when an action is
-     * performed.
-     * 
-     * @tparam A The type of action being performed.
-     * @param data The data related to the action.
-     * 
-     * @returns If the action was successful.
-     */
-    template<ActionType A>
-    bool action(ActionData<A> &data);
 
     bool rune_moveable(Hexagon::Hexagon<int> hex);
 
@@ -200,50 +170,4 @@ private:
 
     /// The game space.
     Board m_board;
-
-    /// History of actions performed in the game.
-    std::vector<Action> m_history;
-};
-
-template<Runes::ActionType A, typename... Args>
-std::tuple<bool, Runes::Action> Runes::perform(Args&&... args)
-{
-    auto data = std::make_shared<ActionData<A>>(std::forward<Args>(args)...);
-    Action action = {
-        .type = A,
-        .data = std::make_shared<ActionData<A>>(std::forward<Args>(args)...)
-    };
-
-    bool success = Runes::action<A>(*(ActionData<A>*)action.data.get());
-    if (success)
-        m_history.push_back(action);
-
-    return std::make_tuple(success, action);
-}
-
-template<>
-struct Runes::ActionData<Runes::ADD_PLAYER> {
-    std::string name;
-    std::size_t player_id;
-};
-
-template<>
-struct Runes::ActionData<Runes::GIVE_PLAYER_RUNE> {
-    std::size_t player_id;
-    Runes::RuneType rune;
-    std::size_t n;
-};
-
-template<>
-struct Runes::ActionData<Runes::PLACE_PLAYER_RUNE> {
-    std::size_t player_id;
-    Runes::RuneType rune;
-    Hexagon::Hexagon<int> hexagon;
-};
-
-template<>
-struct Runes::ActionData<Runes::MOVE_PLAYER_RUNE> {
-    std::size_t player_id;
-    Hexagon::Hexagon<int> from;
-    Hexagon::Hexagon<int> to;
 };

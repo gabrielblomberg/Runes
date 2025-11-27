@@ -3,5 +3,6 @@
 int main(int argc, char **argv)
 {
     Application app;
-    return app.main();
+    app.main();
+    return 0;
 }

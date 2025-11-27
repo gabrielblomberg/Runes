@@ -340,5 +340,5 @@ private:
     std::unordered_map<Signature, std::unordered_set<Entity>> m_entity_caches;
 
     /// All the component data arrays.
-    TypeList::TupleOf<TypeList::Map<ComponentArray, ComponentList>> m_components;
+    TypeList::TupleOf<TypeList::Wrap<ComponentArray, ComponentList>> m_components;
 };

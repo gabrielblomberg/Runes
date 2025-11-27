@@ -1,10 +1,5 @@
 #include "Runes.h"
 
-using enum Runes::ActionType;
-
-template<Runes::ActionType A>
-using ActionData = Runes::ActionData<A>;
-
 std::vector<Hexagon::Hexagon<int>> Runes::neighbors(Hexagon::Hexagon<int> hex)
 {
     auto it = m_board.at(hex);
@@ -48,57 +43,50 @@ bool Runes::rune_moveable(Hexagon::Hexagon<int> hex)
     // search::BFS<Hexagon::Hexagon<int>>();
 }
 
-template<>
-bool Runes::action<ADD_PLAYER>(ActionData<ADD_PLAYER> &data)
+std::optional<std::size_t> Runes::add_player(const AddPlayer& request)
 {
-    data.player_id = m_players.size();
-    m_players.emplace_back(data.player_id, data.name);
-
-    return true;
+    auto player_id = m_players.size();
+    m_players.emplace_back(player_id, request.name);
+    return player_id;
 }
 
-template<>
-bool Runes::action<GIVE_PLAYER_RUNE>(ActionData<GIVE_PLAYER_RUNE> &data)
+bool Runes::give_rune(const GiveRune &request)
 {
-    if (m_players.size() > data.player_id)
+    if (m_players.size() > request.player_id)
         return false;
 
     // Find the runes.
-    auto &runes = m_players[data.player_id].m_runes;
-    auto it = runes.find(data.rune);
+    auto &runes = m_players[request.player_id].m_runes;
+    auto it = runes.find(request.rune);
 
-    if (it == runes.end()) {
-        runes[data.rune] = data.n;
-    }
-    else {
-        runes[data.rune] += data.n;
-    }
+    if (it == runes.end())
+        runes[request.rune] = request.n;
+    else
+        runes[request.rune] += request.n;
 
     return true;
 }
 
-template<>
-bool Runes::action<PLACE_PLAYER_RUNE>(ActionData<PLACE_PLAYER_RUNE> &data)
+bool Runes::place_rune(const PlaceRune &request)
 {
     auto [it, success] = m_board.add_vertex(
-        data.hexagon,
-        Rune(data.rune, data.player_id)
+        request.hexagon,
+        Rune(request.rune, request.player_id)
     );
 
     // Add edges to the neighboring runes.
-    for (auto &neighbor : data.hexagon.neighbors()) {
+    for (auto &neighbor : request.hexagon.neighbors()) {
         if (m_board.contains_vertex(neighbor)) {
-            m_board.add_edge(neighbor, data.hexagon);
-            m_board.add_edge(data.hexagon, neighbor);
+            m_board.add_edge(neighbor, request.hexagon);
+            m_board.add_edge(request.hexagon, neighbor);
         }
     }
 
     return true;
 }
 
-template<>
-bool Runes::action<MOVE_PLAYER_RUNE>(ActionData<MOVE_PLAYER_RUNE> &data)
-{
-    m_board.remove_vertex(data.from);
+bool Runes::move_rune(const MoveRune &request)
+ {
+    m_board.remove_vertex(request.from);
     return true;
 }

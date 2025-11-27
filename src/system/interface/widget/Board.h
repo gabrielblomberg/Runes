@@ -4,7 +4,6 @@
 #include <SFML/System/Vector2.hpp>
 
 #include "system/render/RenderSystem.h"
-#include "system/EntitySystem.h"
 #include "utility/Hexagon.h"
 #include "utility/Vector2.h"
 #include "system/logic/Runes.h"
@@ -62,7 +61,7 @@ private:
      * @brief Display the board to a window.
      * @param window The window to display the board to.
      */
-    void render(RenderLock &renderer);
+    void render(sf::RenderWindow &window);
 
     /**
      * @brief Draw a single hexagon to the window.
@@ -89,8 +88,6 @@ private:
 
     /// Hexagon to draw.
     sf::ConvexShape m_hexagon;
-
-    Runes *m_runes;
 
     std::mutex m_mutex;
 };

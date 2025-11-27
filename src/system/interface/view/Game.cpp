@@ -4,42 +4,36 @@
 #include "system/logic/Runes.h"
 #include "utility/Time.h"
 
-GameInterface::GameInterface(
-    MessagingSystem *event_system,
-    RenderSystem *render_system,
-    EntitySystem *ecs
-  ) : Interface(event_system, render_system, ecs)
+GameInterface::GameInterface(InterfaceSystem *interface_system)
+    : Interface(interface_system)
+    , m_click(m_events->click.subscribe_sync())
+    , m_mouse(m_events->mouse.subscribe_sync())
     , m_board(
-        m_runes,
-        Vector2i(render_system->screen_width(), render_system->screen_height()),
+        Vector2i(m_events->screen.get().width, m_events->screen.get().height),
         Vector2d(20, 20)
     )
 {
-    m_scene.add_entity(m_board.entity());
-    render_system->scene_set(m_scene);
-
-    event_system->messenger().subscribe<CLICK>(
-        [this](const Event<CLICK> &m) { handle_click(m); }
-    );
-
-    event_system->messenger().subscribe<MOUSE>(
-        [this](const Event<MOUSE> &m) { handle_mouse(m); }
-    );
 }
 
-std::unique_ptr<Interface> GameInterface::main(StopCondition &&stop)
+std::unique_ptr<Interface> GameInterface::step()
 {
-    stop.wait();
-    return {};
+    while (auto&& click = m_click.get())
+        handle_click(*click);
+
+    while (auto&& mouse = m_mouse.get())
+        handle_mouse(*mouse);
+
+    return nullptr;
 }
 
-void GameInterface::handle_click(const Event<CLICK> &click)
+void GameInterface::handle_click(const Message::Click &click)
 {
     std::unique_lock lock(m_mutex);
 
     Hexagon::Hexagon<int> hex = m_board.grid().to_hexagon(click.x, click.y);
 
     if (click.button == sf::Mouse::Button::Left) {
+        m_events.place_rune.request()
         m_runes.perform<Runes::ActionType::PLACE_PLAYER_RUNE>(
             0, Runes::RuneType::VITALITY, hex
         );
@@ -49,7 +43,7 @@ void GameInterface::handle_click(const Event<CLICK> &click)
     }
 }
 
-void GameInterface::handle_mouse(const Event<MOUSE> &mouse)
+void GameInterface::handle_mouse(const Message::Mouse &mouse)
 {
     static Hexagon::Hexagon<int> last;
     std::scoped_lock<std::mutex> lock(m_mutex);

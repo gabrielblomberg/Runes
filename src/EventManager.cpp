@@ -6,7 +6,7 @@ void EventManager::step()
     for(;;) {
         auto event = m_window->pollEvent();
         if (!event || m_stop.stop_requested())
-            return
+            return;
 
         if (auto key = event->getIf<sf::Event::KeyPressed>()) {
             this->key.publish(key->code, true);

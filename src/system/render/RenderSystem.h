@@ -9,8 +9,7 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#include "system/EntitySystem.h"
-#include "system/render/RenderLock.h"
+#include "ECS.h"
 #include "system/System.h"
 
 /**

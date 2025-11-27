@@ -1,12 +1,11 @@
 #include "system/object/Board.h"
 
-Board::Board(Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
+Board::Board(Vector2i pixel_dimensions, Vector2d hexagon_size)
     : m_entity(s_ecs.create_entity())
     , m_texture()
     , m_grid()
     , m_view()
     , m_hexagon()
-    , m_runes(&runes)
 {
     // Options for the texture storing the hexagonal grid.
     sf::ContextSettings texture_settings;
@@ -38,15 +37,15 @@ Board::Board(Runes &runes, Vector2i pixel_dimensions, Vector2d hexagon_size)
 
     ecs.add_component<Renderable>(
         m_entity,
-        [this](RenderLock &renderer){ render(renderer); }
+        [this](sf::RenderWindow &window){ render(window); }
     );
 }
 
-void Board::render(RenderLock &renderer)
+void Board::render(sf::RenderWindow &window)
 {
     m_texture.clear();
 
-    sf::Color colour = m_runes->connected() ? sf::Color::White : sf::Color::Red;
+    // sf::Color colour = m_runes->connected() ? sf::Color::White : sf::Color::Red;
 
     m_hexagon.setFillColor(sf::Color::Black);
     m_hexagon.setOutlineThickness(1);
@@ -68,18 +67,15 @@ void Board::render(RenderLock &renderer)
         }
     }
 
-    {
-        std::unique_lock lock(m_mutex);
-        for (auto &[hex, colour] : m_highlights)
-            render_hexagon(hex, colour);
-    }
+    for (auto &[hex, colour] : m_highlights)
+        render_hexagon(hex, colour);
 
     m_texture.display();
 
     sf::Sprite sprite {m_texture.getTexture()};
 
-    renderer->setView(m_view);
-    renderer->draw(sprite);
+    window->setView(m_view);
+    window->draw(sprite);
 }
 
 void Board::render_hexagon(Hexagon::Hexagon<int> hexagon, sf::Color colour)

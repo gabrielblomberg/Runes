@@ -209,7 +209,7 @@ struct _Map
 };
 
 template<template<typename T> class Function, typename Head>
-struct _Map<Function, TypeList<Head>>
+struct _Map<Function, Head>
 {
     using type = TypeList<typename Function<Head>::type>;
 };

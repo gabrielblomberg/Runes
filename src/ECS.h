@@ -3,6 +3,7 @@
 #include "utility/EntityComponentSystem.h"
 #include "system/logic/Runes.h"
 
+#include <SFML/Graphics/RenderWindow.hpp>
 #include <functional>
 
 inline const constexpr std::int64_t MAX_ENTITIES = 1024;
@@ -26,12 +27,10 @@ struct Component<ComponentType::Position> {
     double y;
 };
 
-class RenderLock;
-
 /**
  * @brief Function callback for the renderer.
  */
-using RenderFunction = std::function<void(RenderLock&)>;
+using RenderFunction = std::function<void(sf::RenderWindow&)>;
 
 /**
  * @brief Component render function.
