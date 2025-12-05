@@ -1,14 +1,15 @@
 #pragma once
 
 #include <algorithm>
-#include <functional>
-#include <cassert>
-#include <deque>
 #include <array>
 #include <bitset>
-#include <unordered_set>
+#include <cassert>
+#include <cstdint>
+#include <deque>
+#include <functional>
 #include <iostream>
 #include <numeric>
+#include <unordered_set>
 
 #include "utility/TypeList.h"
 
@@ -27,7 +28,7 @@ public:
 
     /**
      * @brief Bitset signifying the components belonging to an entity.
-     * 
+     *
      * The signature has a bit set for every component the entity has, and
      * cleared for components the entity does not have.
      */
@@ -59,7 +60,7 @@ public:
 
     /**
      * @brief Create an entity with its components.
-     * 
+     *
      * @param args The components of the entity.
      * @returns The entity identifier.
      */
@@ -70,14 +71,15 @@ public:
 
         // Add each component.
         (std::get<TypeList::Index<ComponentList, std::remove_cvref<Args>>>(m_components)
-            .add(entity, std::forward(args)), ...);
+             .add(entity, std::forward(args)),
+         ...);
 
         // Set the signature from the component indexes.
         Signature signature = ((1 + TypeList::Index<ComponentList, std::remove_cvref<Args>>) | ...);
         m_entity_signatures[entity] = signature;
 
         // Update entity caches.
-        for (auto &cache : m_entity_caches)
+        for (auto& cache : m_entity_caches)
             if (signature & cache.signature)
                 cache.entities.insert(entity);
 
@@ -86,12 +88,12 @@ public:
 
     /**
      * @brief Get the signature of a component.
-     * 
+     *
      * The signature has a bit set for every component the entity has, and
      * cleared for components the entity does not have.
-     * 
+     *
      * The entity has a Component if 1 << Component is set.
-     * 
+     *
      * @param entity The entity.
      * @returns The entities component signature.
      */
@@ -103,33 +105,27 @@ public:
 
     /**
      * @brief Remove an entity from the entity component system.
-     * 
+     *
      * Frees up the entities component identifier, data storage, and updates
      * system entity collections.
-     * 
+     *
      * @param entity The entity to remove.
      */
     void remove_entity(Entity entity)
     {
         {
-            auto it = std::lower_bound(
-                m_available_entities.begin(),
-                m_available_entities.end(),
-                entity
-            );
-    
+            auto it =
+                std::lower_bound(m_available_entities.begin(), m_available_entities.end(), entity);
+
             assert(it == m_available_entities.end() && entity < N && "entity out of range");
         }
 
         // Remove components from entity.
-        std::apply(
-            [entity](auto&... array){ (array.remove(entity), ...); },
-            m_components
-        );
+        std::apply([entity](auto&... array) { (array.remove(entity), ...); }, m_components);
 
         // Remove entity from caches.
         Signature signature = m_entity_signatures[entity];
-        for (auto &cache : m_entity_caches)
+        for (auto& cache : m_entity_caches)
             if ((cache.signature & signature).any())
                 cache.entities.erase(entity);
 
@@ -140,60 +136,55 @@ public:
     /**
      * @brief Get the number of entities.
      */
-    std::size_t total_entities()
-    {
-        return N - m_available_entities.size();
-    }
+    std::size_t total_entities() { return N - m_available_entities.size(); }
 
     /**
      * @brief Add a component to an entity.
-     * 
+     *
      * @tparam Component The type of component.
      * @param args The parts of the component.
      */
     template<std::size_t Component, typename... Args>
     inline void add_component(Entity entity, Args&&... args)
     {
-        add_component<Component>(
-            entity,
-            TypeList::Get<ComponentList, Component>(args...)
-        );
+        add_component<Component>(entity, TypeList::Get<ComponentList, Component>(args...));
     }
 
     /**
      * @brief Add a component to an entity.
-     * 
+     *
      * @tparam ComponentType The type of component.
      * @param entity The entity to add the component to.
      * @param component The instance of the component.
      */
     template<std::size_t Component>
-    inline void add_component(Entity entity, TypeList::Get<ComponentList, Component> &&component)
+    inline void add_component(Entity entity, TypeList::Get<ComponentList, Component>&& component)
     {
-        std::get<Component>(m_components).add(entity, std::forward<TypeList::Get<ComponentList, Component>>(component));
-        Signature &signature = m_entity_signatures[entity].set(Component, true);
+        std::get<Component>(m_components)
+            .add(entity, std::forward<TypeList::Get<ComponentList, Component>>(component));
+        Signature& signature = m_entity_signatures[entity].set(Component, true);
 
-        for (auto &cache : m_entity_caches)
+        for (auto& cache : m_entity_caches)
             if ((signature & cache.signature).any())
                 cache.entities.insert(entity);
     }
 
     /**
      * @brief Get the component data for an entity.
-     * 
+     *
      * @tparam ComponentType The type of component.
      * @param entity The entity to get the component from.
      * @return A reference to the component data.
      */
     template<std::size_t Component>
-    inline auto &get_component(Entity entity)
+    inline auto& get_component(Entity entity)
     {
         return std::get<Component>(m_components).get(entity);
     }
 
     /**
      * @brief Remove a component from an entity.
-     * 
+     *
      * @tparam ComponentType The type of component to remove from the entity.
      * @param entity The entity to remove the component from.
      */
@@ -203,7 +194,7 @@ public:
         std::get<Component>(m_components).remove(entity);
         Signature signature = m_entity_signatures[entity].set(Component, false);
 
-        for (auto &set : m_entity_caches)
+        for (auto& set : m_entity_caches)
             if (!(signature & set.signature))
                 set.entities.erase(entity);
     }
@@ -212,7 +203,7 @@ public:
      * @brief Get a cache of entities with a given signature.
      * @returns The cache.
      */
-    const std::unordered_set<Entity> &get_cache(Signature signature)
+    const std::unordered_set<Entity>& get_cache(Signature signature)
     {
         auto it = m_entity_caches.find(signature);
         if (it == m_entity_caches.end())
@@ -234,7 +225,7 @@ private:
 
         /**
          * @brief Add a component to an entity.
-         * 
+         *
          * @param entity The entity to add the component to.
          * @param component The component to add.
          */
@@ -253,11 +244,11 @@ private:
 
         /**
          * @brief Get the component of an entity.
-         * 
+         *
          * @param entity The entity to get the component of.
          * @returns The component of the entity.
          */
-        ComponentType &get(Entity entity)
+        ComponentType& get(Entity entity)
         {
             assert(entity < N && "entity out of range");
             return m_components[m_entity_to_index[entity]];
@@ -265,7 +256,7 @@ private:
 
         /**
          * @brief Reset an entities data.
-         * 
+         *
          * @param entity The entity to reset.
          */
         inline void remove(Entity entity)
@@ -307,7 +298,7 @@ private:
 
     /**
      * @brief Create a new entity set.
-     * 
+     *
      * @param signature The signature of the entity set.
      */
     auto create_entity_cache(Signature signature)
@@ -316,7 +307,6 @@ private:
         auto available = m_available_entities.begin();
 
         for (Entity entity = 0; entity < N; ++entity) {
-
             // Skip non-existing entities.
             if (*available == entity) {
                 ++available;

@@ -1,0 +1,34 @@
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+DisableFormat: false
+Language: Cpp
+BasedOnStyle: Google
+ColumnLimit: 100
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+IndentWidth: 4
+AccessModifierOffset: -4
+ConstructorInitializerIndentWidth: 4
+AlignArrayOfStructures: Left
+AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: false
+BinPackArguments: false
+BinPackParameters: OnePerLine
+PackConstructorInitializers: Never
+EmptyLineAfterAccessModifier: Always
+EmptyLineBeforeAccessModifier: Always
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+InsertNewlineAtEOF: true
+BreakStringLiterals: false
+SpaceAfterTemplateKeyword: false
+BreakConstructorInitializers: BeforeComma
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterEnum: true
+  AfterFunction: true
+  BeforeCatch: true
+  BeforeElse: true
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false

@@ -2,6 +2,7 @@ FROM ubuntu:latest
 
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
+    sudo \
     git \
     wget \
     cmake \
@@ -35,18 +36,22 @@ RUN cd /tmp \
     && cd .. \
     && rm -rf sfml
 
-# RUN pipx install clang-format && \
-#     pipx ensurepath
-#
-# ARG USERNAME=vscode
-# ARG USER_UID=1001
-# ARG USER_GID=$USER_UID
-#
-# RUN groupadd --gid $USER_GID $USERNAME \
-#     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-#     && apt-get update \
-#     && apt-get install -y sudo \
-#     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-#     && chmod 0440 /etc/sudoers.d/$USERNAME
-#
-# USER $USERNAME
+RUN (echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"; \
+     echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main") > /etc/apt/sources.list.d/llvm.list && \
+    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key > /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    apt-get update --fix-missing && \
+    apt-get install -y --no-install-recommends \
+      clangd-21 \
+      clang-tidy-21 \
+      clang-format-21 && \
+    ln -s /usr/bin/clang-21 /usr/local/bin/clang && \
+    ln -s /usr/bin/clang++-21 /usr/local/bin/clang++ && \
+    ln -s /usr/bin/clangd-21 /usr/local/bin/clangd && \
+    ln -s /usr/bin/clang-tidy-21 /usr/local/bin/clang-tidy && \
+    ln -s /usr/bin/clang-format-21 /usr/local/bin/clang-format
+
+RUN useradd -m -s /bin/bash dev && echo 'dev ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+USER dev
+
+ENTRYPOINT [ "sh", "-c", "trap 'exit 0' TERM; sleep infinity & wait" ]
+

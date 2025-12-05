@@ -1,30 +1,7 @@
 {
     "name": "Runes Dev Container",
-    "build": {
-        "dockerfile": "Dockerfile"
-    },
-    // "remoteUser": "vscode",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/runes,type=bind",
+    "dockerComposeFile": "compose.yaml",
+    "service": "runes_devcontainer",
     "workspaceFolder": "/workspaces/runes/",
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-vscode.cpptools",
-                "mhutchie.git-graph"
-            ]
-        }
-    },
-    // "postCreateCommand": "sudo chown -R vscode /workspaces",
-    "privileged": true,
-    "mounts": [
-		// "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
-		// "source=/mnt/wslg,target=/mnt/wslg,type=bind"
-		// "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached",
-	],
-    "containerEnv": {
-		"DISPLAY": "${env:DISPLAY}",
-		"WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
-		"XDG_RUNTIME_DIR": "${localEnv:$XDG_RUNTIME_DIR}",
-		"PULSE_SERVER": "${localEnv:PULSE_SERVER}"
-	}
+    "shutdownAction": "stopCompose"
 }

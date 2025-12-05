@@ -1,0 +1,10 @@
+CompileFlags:
+  CompilationDatabase: build
+  BuiltinHeaders: QueryDriver
+  Add:
+    - -std=c++20
+  Remove:
+    - -Werror
+Diagnostics:
+  ClangTidy:
+    Remove: ["*"]

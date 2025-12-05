@@ -1,0 +1,27 @@
+services:
+  runes_devcontainer:
+    build:
+      dockerfile: Dockerfile
+    container_name: runes_devcontainer 
+    working_dir: /runes
+    volumes:
+      - ..:/runes
+      - ~/.bashrc:/home/dev/.bashrc:ro
+    environment:
+      - DISPLAY=${DISPLAY}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - PULSE_SERVER=${PULSE_SERVER}
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    tty: true
+    stdin_open: true
+    privileged: true
+    command: >
+      sh -c '
+        trap "exit 0" TERM;
+        sleep infinity & wait;
+      '
+

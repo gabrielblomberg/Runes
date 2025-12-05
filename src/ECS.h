@@ -1,14 +1,17 @@
 #pragma once
 
-#include "utility/EntityComponentSystem.h"
-#include "system/logic/Runes.h"
-
 #include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Window.hpp>
 #include <functional>
+
+#include "system/logic/Runes.h"
+#include "utility/EntityComponentSystem.h"
+#include "utility/TypeList.h"
 
 inline const constexpr std::int64_t MAX_ENTITIES = 1024;
 
-enum ComponentType : std::size_t {
+enum ComponentType : std::size_t
+{
     Renderable,
     Position,
     Rune,
@@ -66,8 +69,7 @@ using Components = TypeList::TypeList<
     Component<ComponentType::Renderable>,
     Component<ComponentType::Position>,
     Component<ComponentType::Rune>,
-    Component<ComponentType::Player>    
->;
+    Component<ComponentType::Player> >;
 
 /**
  * @brief The entity component system used for the game.

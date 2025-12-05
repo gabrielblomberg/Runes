@@ -1,11 +1,13 @@
 #pragma once
 
-#include "ECS.h"
+#include <stop_token>
 
+#include "ECS.h"
+#include "ECSEvents.h"
 #include "system/interface/InterfaceSystem.h"
-#include "system/render/RenderSystem.h"
 #include "system/logic/RuneSystem.h"
-#include "EventManager.h"
+#include "system/render/RenderSystem.h"
+#include "utility/SynchronousEventQueue.h"
 
 class Application
 {
@@ -15,6 +17,8 @@ public:
 
     void main();
 
+    void step_input();
+
 private:
 
     std::unique_ptr<sf::RenderWindow> create_window();
@@ -23,11 +27,9 @@ private:
     std::unique_ptr<sf::RenderWindow> m_window;
 
     ECS m_ecs;
-    EventManager m_event_manager;
+    ECSEvents m_ecs_events;
 
     RuneSystem m_rune_system;
     InterfaceSystem m_interface_system;
     RenderSystem m_render_system;
-
-    Subscription m_stop_subscription;
 };
